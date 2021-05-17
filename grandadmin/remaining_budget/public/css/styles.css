@@ -1,0 +1,25 @@
+.resource-box {
+  width: 50%;
+  height: 150px;
+  margin: 20px auto;
+}
+
+.box-resource-ready {
+  font-size: 10rem;
+  color: limegreen;
+}
+
+.box-resource-processing {
+  font-size: 10rem;
+  color: #FDD65E;
+}
+
+.home-page .card {
+  height: 270px;
+}
+
+.status-message {
+  position: absolute;
+  right: 20px;
+  bottom: 10px;
+}

@@ -1,0 +1,116 @@
+.table-responsive {
+  max-height: 680px;
+  overflow: auto;
+}
+
+.table-responsive::-webkit-scrollbar-track {
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+  -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  background-color: #F5F5F5;
+}
+
+.table-responsive::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+  background-color: #F5F5F5;
+}
+
+.table-responsive::-webkit-scrollbar-thumb {
+  border-radius: 10px;
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, .3);
+  -webkit-box-shadow: inset 0 0 6px rgba(0, 0, 0, .3);
+  background-color: #555;
+}
+
+.resource-box {
+  height: 20rem !important;
+}
+
+.upload-transfer-file-ready,
+.upload-transfer-file-fail,
+.upload-gl-revenue-file-ready {
+  font-size: 10rem;
+}
+.upload-transfer-file-ready,
+.upload-gl-revenue-file-ready {
+  color: limegreen;
+}
+.upload-transfer-file-fail {
+  color: red;
+}
+
+.resource-box__icon,
+.resource-box__icon,
+.resource-box__icon {
+  font-size: 10rem;
+}
+.resource-box__icon .processing {
+  color: #FDD65E;
+}
+.resource-box__icon .ready {
+  color: limegreen;
+}
+
+.home-page .card {
+  height: 270px;
+}
+
+.status-message {
+  position: absolute;
+  right: 20px;
+  bottom: 10px;
+}
+
+.gl-revenue-count-rows,
+.transfer-count-rows {
+  position: absolute;
+  left: 20px;
+  bottom: 10px;
+}
+
+.position-left {
+  position: absolute;
+  left: 20px;
+  bottom: 10px;
+}
+.position-right {
+  position: absolute;
+  right: 20px;
+  bottom: 10px;
+}
+
+.hide {
+  display: none !important;
+}
+
+.resources {
+  position: relative;
+}
+
+.import-file-process {
+  position: relative;
+  top: 28%;
+}
+
+.error-icon {
+  color: red;
+}
+
+.broken-data-icon {
+  color: red;
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 150px;
+}
+
+.error-type-lists {
+  font-weight: normal !important;
+  font-style: normal !important;
+  color: red !important;
+}
+
+.edit-able{
+  cursor: pointer;
+}
