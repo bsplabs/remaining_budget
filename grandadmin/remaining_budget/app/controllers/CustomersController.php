@@ -21,6 +21,196 @@ class CustomersController extends Controller
     $this->view("layout/footer");
   }
 
+  public function importCustomers()
+  {
+    header("Content-Type: application/json");
+    if ($_SERVER["REQUEST_METHOD"] === "POST") {
+      $allowedFileType = array(
+        'application/vnd.ms-excel',
+        'text/xls',
+        'text/xlsx',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
+      if (in_array($_FILES["inputCustomerFileImport"]["type"], $allowedFileType)) {
+        $file_path = $_FILES["inputCustomerFileImport"]['tmp_name'];
+        $objPHPExcel = PHPExcel_IOFactory::load($file_path);
+        $excelSheet = $objPHPExcel->getActiveSheet();
+        $highestRow = $excelSheet->getHighestRow(); // e.g. 10
+
+        $customers = array();
+
+        for ($row = 2; $row <= $highestRow; ++$row) 
+        {
+          $id = $excelSheet->getCell('A' . $row)->getValue();
+          $parent_id = $excelSheet->getCell("B" . $row)->getValue();
+          $grandadmin_customer_id = $excelSheet->getCell("C" . $row)->getValue();
+          $grandadmin_customer_name = $excelSheet->getCell("D" . $row)->getValue();
+          $offset_acct = $excelSheet->getCell("E" . $row)->getValue();
+          $offset_acct_name = $excelSheet->getCell("F" . $row)->getValue();
+          $main_business = $excelSheet->getCell("G" . $row)->getValue() == 'Yes' ? true : false;
+          $company = $excelSheet->getCell("H" . $row)->getValue();
+          $payment_method = $excelSheet->getCell("I" . $row)->getValue();
+    
+          array_push($customers, array(
+            "id" => $id,
+            "parent_id" => $parent_id,
+            "grandadmin_customer_id" => $grandadmin_customer_id,
+            "grandadmin_customer_name" => $grandadmin_customer_name,
+            "offset_acct" => $offset_acct,
+            "offset_acct_name" => $offset_acct_name,
+            "main_business" => $main_business,
+            "company" => $company,
+            "payment_method" => $payment_method,
+          ));
+        }
+
+        $insert = 0;
+        $replace = 0;
+        $insert_success = 0;
+        $insert_fail = 0;
+        $replace_success = 0;
+        $replace_fail = 0;
+        $insert_fail_lists = array();
+        $replace_fail_lists = array();
+        $result_lists = array();
+        foreach ($customers as $index => $customer) 
+        {
+          if (empty($customer["id"])) {
+            $insert++;
+            $error_occured = false;
+            // insert
+            
+            if (empty($customer['grandadmin_customer_id']) && empty($customer['grandadmin_customer_name']) && empty($customer['offset_acct']) && empty($customer['offset_acct_name'])) {
+              $error_occured = true;
+              array_push($result_lists, array(
+                "row" => ($index + 1),
+                "action" => "insert",
+                "error_message" => "Customer ID and Customer Name and Offset Acct and Offset Acct Name => Empty"
+              ));
+              $insert_fail++;
+              continue;
+            }
+
+            $check_customer_key = $this->customerModel->checkCustomerKey($customer);
+            if ($check_customer_key['status'] === 'fail' || $check_customer_key == 0) {
+              $error_occured = true;
+              array_push($result_lists, array(
+                "row" => ($index + 1),
+                "action" => "insert",
+                "error_message" => "These CustomerID, Customer Name, Offset Acct and Offset Acct Name keys already exists"
+              ));
+              $insert_fail++;
+              continue;
+            }
+
+            $insert_customer = $this->customerModel->insertCustomer($customer);
+            if ($insert_customer['status'] === 'success') {
+              $insert_success++;
+            } else {
+              array_push($result_lists, array(
+                "row" => ($index + 1),
+                "action" => "insert",
+                "error_message" => "Insert failed"
+              ));
+              $insert_fail++;
+            }
+          } else {
+            $replace++;
+            // replace
+            $error_occured = false;
+            // check id exists ?
+            $check_id = $this->customerModel->checkID($customer["id"]);
+            if ($check_id["status"] === 'fail' || $check_id['data'] == 0) {
+              $error_occured = true;
+              array_push($result_lists, array(
+                "row" => ($index + 1),
+                "action" => "replace",
+                "error_message" => 'ID not found in database'
+              ));
+              $replace_fail++;
+              continue;
+            }
+
+            if (empty($customer['grandadmin_customer_id']) && empty($customer['grandadmin_customer_name']) && empty($customer['offset_acct']) && empty($customer['offset_acct_name'])) {
+              $error_occured = true;
+              array_push($result_lists, array(
+                "row" => ($index + 1),
+                "action" => "replace",
+                "error_message" => "Customer ID and Customer Name and Offset Acct and Offset Acct Name => Empty"
+              ));
+              $replace_fail++;
+              continue;
+            }
+
+            // check customer_id, customer_name, offset_acct and offset_acct_name
+            $check_customer_key = $this->customerModel->checkCustomerKey($customer);
+            if ($check_customer_key['status'] === 'fail' || $check_customer_key == 0) {
+              $error_occured = true;
+              array_push($result_lists, array(
+                "row" => ($index + 1),
+                "action" => "replace",
+                "error_message" => "These CustomerID, Customer Name, Offset Acct and Offset Acct Name keys already exists"
+              ));
+              $replace_fail++;
+              continue;
+            }
+
+            // if ($error_occured) {
+            //   $replace_fail++;
+            //   continue;
+            // }
+
+            $replace_customer = $this->customerModel->replaceCustomer($customer);
+            if ($replace_customer['status'] === 'success') {
+              $replace_success++;
+            } else {
+              array_push($result_lists, array(
+                "row" => ($index + 1),
+                "action" => "replace",
+                "error_message" => "Replace failed"
+              ));
+              $replace_fail++;
+            }
+          }
+        }
+
+        $res = array(
+          "status" => "success",
+          "data" => array(
+            "insert_total" => $insert,
+            "replace_total" => $replace,
+            "insert_success_total" => $insert_success,
+            "insert_fail_total" => $insert_fail,
+            // "insert_fail_lists" => $insert_fail_lists,
+            "replace_success_total" => $replace_success,
+            "replace_fail_total" => $replace_fail,
+            // "replace_fail_lists" => $replace_fail_lists,
+            "result_lists" => $result_lists
+          )
+        );
+
+        echo json_encode($res);
+        exit;
+
+      } else {
+        $res = array(
+          'status' => 'error',
+          'message' => 'Invalid file type'
+        );
+        echo json_encode($res);
+        exit;  
+      }
+    } else {
+      $res = array(
+        'status' => 'error',
+        'message' => 'Allow only POST method'
+      );
+      echo json_encode($res);
+      exit;
+    }
+
+  }
+
   public function exportCustomers()
   {
     $objPHPExcel = new PHPExcel();

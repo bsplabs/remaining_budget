@@ -144,6 +144,53 @@ $(document).ready(function () {
     $('#modalImportCustomers').modal('toggle');
   });
 
+  $('#importCustomersForm').submit(function(event) {
+    $('#importCustomersSubmitButton .spinner-button').removeClass('hide');
+
+    event.preventDefault();
+
+    var formData = new FormData($(this)[0]);
+
+    $.ajax({
+      url: base_url + '/customers/import-customers',
+      type: 'POST',
+      data: formData,
+      processData: false,
+      contentType: false,
+      success: function(res) {
+        $('#modalImportCustomers').modal('toggle');
+        $('#importCustomersSubmitButton .spinner-button').removeClass('hide').addClass('hide');
+        if (res.status === 'error') {
+          Swal.fire({
+            icon: "error",
+            title: "Oops...",
+            text: res.message,
+          });
+        } else if (res.status === 'success') {
+          $('#resultImportCustomerInsertTotal').text(res.data.insert_total);
+          $('#resultImportCustomerReplaceTotal').text(res.data.replace_total);
+          $('#resultImportCustomerInsertSuccess').text(res.data.insert_success_total);
+          $('#resultImportCustomerReplaceSuccess').text(res.data.replace_success_total);
+          $('#resultImportCustomerInsertFail').text(res.data.insert_fail_total);
+          $('#resultImportCustomerReplaceFail').text(res.data.replace_fail_total);
+
+          $i = 1;
+          res.data.result_lists.forEach(function(el) {
+            if ($i > 100) return 0;
+            var td = '<td>' + el.row + '</td>';
+            td += '<td>' + el.action + '</td>';
+            td += '<td class="text-danger">' + el.error_message + '</td>';
+
+            $('#customerImportResultTbody').append('<tr>' + td + '</tr>');
+            $i++;
+          });
+          $('#modalCustomerImportResults').modal('show');
+        }
+      }
+    });
+
+  });
+
   $("#exportCustomers").click(function () {
     var xhr = new XMLHttpRequest();
     xhr.open("GET", base_url + "/customers/export-customers");

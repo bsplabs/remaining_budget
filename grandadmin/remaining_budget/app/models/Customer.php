@@ -147,6 +147,142 @@ class Customer
     return $result;
   }
 
+  public function checkID($id)
+  {
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "SELECT COUNT(*) as rowCount FROM remaining_budget_customers WHERE id = :id";
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("id", $id);
+      $stmt->execute();
+      $fetch_row_count = $stmt->fetch(PDO::FETCH_ASSOC);
+      $row_count = $fetch_row_count["rowCount"];
+      $result["status"] = "success";
+      $result["data"] = $row_count;
+    } catch (PDOException $e) {
+      $result["status"] = "error";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+  public function checkCustomerKey($customer)
+  {
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "SELECT COUNT(*) as rowCount 
+              FROM remaining_budget_customers 
+              WHERE gramdadmin_customer_id = :grandadmin_customer_id
+                AND grandadmin_customer_name = :grandadmin_customer_name
+                AND offset_acct = :offset_acct
+                AND offset_acct_name = :offset_acct_name 
+            ";
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("parent_id", $parent_id);
+      $stmt->execute();
+      $fetch_row_count = $stmt->fetch(PDO::FETCH_ASSOC);
+      $row_count = $fetch_row_count["rowCount"];
+      $result["status"] = "success";
+      $result["data"] = $row_count;
+    } catch (PDOException $e) {
+      $result["status"] = "error";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+  public function insertCustomer($customer)
+  {
+    try {
+      $mainDB = $this->db->dbCon();
+
+      $sql = "INSERT INTO remaining_budget_customers(
+                grandadmin_customer_id,
+                grandadmin_customer_name,
+                offset_acct,
+                offset_acct_name,
+                company,
+                main_business,
+                parent_id,
+                payment_method
+              )
+              VALUES (
+                :grandadmin_customer_id,
+                :grandadmin_customer_name,
+                :offset_acct,
+                :offset_acct_name,
+                :company,
+                :main_business,
+                :parent_id,
+                :payment_method
+              )
+            ";
+
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("grandadmin_customer_id", $customer['grandadmin_customer_id']);
+      $stmt->bindParam("grandadmin_customer_name", $customer['grandadmin_customer_name']);
+      $stmt->bindParam("offset_acct", $customer['offset_acct']);
+      $stmt->bindParam("offset_acct_name", $customer['offset_acct_name']);
+      $stmt->bindParam("company", $customer['company']);
+      $stmt->bindParam("main_business", $customer['main_business']);
+      $stmt->bindParam("parent_id", $customer['parent_id']);
+      $stmt->bindParam("payment_method", $customer['payment_method']);
+      $stmt->execute();
+
+      $result["status"] = "success";
+      $result["data"] = "";
+
+    } catch (PDOException $e) {
+      $result["status"] = "error";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+  public function replaceCustomer($customer)
+  {
+    try {
+      $mainDB = $this->db->dbCon();
+
+      $sql = "UPDATE remaining_budget_customers
+              SET grandadmin_customer_id = :grandadmin_customer_id,
+                  grandadmin_customer_name = :grandadmin_customer_name,
+                  offset_acct = :offset_acct,
+                  offset_acct_name = :offset_acct_name,
+                  company = :company,
+                  main_business = :main_business,
+                  parent_id = :parent_id,
+                  payment_method = :payment_method,
+                  updated_at = NOW()
+              WHERE id = :id
+            ";
+
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("grandadmin_customer_id", $customer['grandadmin_customer_id']);
+      $stmt->bindParam("grandadmin_customer_name", $customer['grandadmin_customer_name']);
+      $stmt->bindParam("offset_acct", $customer['offset_acct']);
+      $stmt->bindParam("offset_acct_name", $customer['offset_acct_name']);
+      $stmt->bindParam("company", $customer['company']);
+      $stmt->bindParam("main_business", $customer['main_business']);
+      $stmt->bindParam("parent_id", $customer['parent_id']);
+      $stmt->bindParam("payment_method", $customer['payment_method']);
+      $stmt->bindParam("id", $customer['id']);
+      $stmt->execute();
+
+      $result["status"] = "success";
+      $result["data"] = "";
+
+    } catch (PDOException $e) {
+      $result["status"] = "error";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
 }
 
 ?>

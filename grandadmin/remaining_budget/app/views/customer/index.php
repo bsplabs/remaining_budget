@@ -54,26 +54,84 @@
   <div class="modal fade" id="modalImportCustomers" tabindex="-1" aria-labelledby="modalImportCustomersLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="staticBackdropLabel">Import Customers</h5>
-        </div>
 
-        <div class="modal-body">
-          <form>
-            <div class="form-group mb-3">
-              <div class="upload-container">
-                <div class="border-container">
-                  <input type="file" class="form-control" id="inputFileImport" style="height: 100%;">
+        <form method="post" action="" id="importCustomersForm">
+          <div class="modal-header">
+            <h5 class="modal-title" id="staticBackdropLabel">Import Customers</h5>
+          </div>
+
+          <div class="modal-body">
+              <div class="form-group mb-3">
+                <div class="upload-container">
+                  <div class="border-container">
+                    <input type="file" class="form-control" name="inputCustomerFileImport" id="inputFileImport" style="height: 100%;">
+                  </div>
                 </div>
               </div>
-            </div>
-          </form>
-        </div>
+          </div>
 
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            <button type="submit" class="btn btn-primary d-flex align-items-center" id="importCustomersSubmitButton">
+              <span class="spinner-button spinner-border spinner-border-sm hide" role="status" aria-hidden="true"></span>
+              <span class="text-button ml-2">Import</span>
+            </button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+  <!-- Result Customer Import -->
+  <div class="modal fade" id="modalCustomerImportResults" tabindex="-1" aria-labelledby="modalCustomerImportResultsLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+      <div class="modal-content">
+        <!-- header  -->
+        <div class="modal-header">
+          <h5 class="modal-title">Customer Import Results</h5>
+        </div>
+        <!-- body -->
+        <div class="modal-body">
+          <div class="import-result-detail mt-2 mb-3 border p-3">
+            <div class="row mb-2">
+              <div class="col-md-6">
+                <b>Insert Task</b>: 
+                <ul>
+                  <li>Total: <span id="resultImportCustomerInsertTotal"></span></li>
+                  <li>Success: <span id="resultImportCustomerInsertSuccess"></span></li>
+                  <li>Fail: <span id="resultImportCustomerInsertFail"></span></li>
+                </ul>
+              </div>
+              <div class="col-md-6">
+                <b>Replace Task</b>: 
+                <ul>
+                  <li>Total: <span id="resultImportCustomerReplaceTotal"></span></li>
+                  <li>Success: <span id="resultImportCustomerReplaceSuccess"></span></li>
+                  <li>Fail: <span id="resultImportCustomerReplaceFail"></span></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          <table class="table table-bordered">
+            <thead>
+              <tr>
+                <th style="width: 10%;">Row</th>
+                <th style="width: 20%;">Action</th>
+                <th style="width: 70%;">Message</th>
+              </tr>
+            </thead>
+            <tbody id="customerImportResultTbody">
+              
+            </tbody>
+          </table>
+        </div>
+        <!-- footer -->
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-          <button type="button" class="btn btn-primary">Import</button>
+          <!-- <button type="button" class="btn btn-primary" id="saveCustomerEdited">Save</button> -->
         </div>
+        <!--  -->
       </div>
     </div>
   </div>
@@ -155,6 +213,8 @@
       </div>
     </div>
   </div>
+
+  <!-- Delete Customer Modal -->
 </div>
 
 <?php require_once APPROOT . "/views/layout/script.php"; ?>
