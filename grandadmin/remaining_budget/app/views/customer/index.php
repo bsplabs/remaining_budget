@@ -18,8 +18,8 @@
       <p class="mb-0">This page show you all customers and you could upload customer resources file to edit customers</p>
     </div>
     <div class="col-md-6 text-right">
-      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalCustomerUpload"><i class='bx bx-add-to-queue'></i> Add / Replace</button>
-      <button class="btn btn-warning" style="margin-left: 5px;" data-bs-toggle="modal" href="#modal" role="button"><i class='bx bx-export'></i> Export</button>
+      <button type="button" class="btn btn-primary" id="importCustomers"><i class='bx bx-add-to-queue'></i> Add / Replace</button>
+      <button type="button" class="btn btn-warning" style="margin-left: 5px;" id="exportCustomers"><i class='bx bx-export'></i> Export</button>
     </div>
   </div>
 
@@ -50,31 +50,20 @@
 
   <br><br>
 
-  <!-- Add/Replace Modal -->
-  <div class="modal fade" id="modalCustomerUpload" tabindex="-1" aria-labelledby="modalCustomerUploadLabel" aria-hidden="true">
+  <!-- Add/Replace Customers Modal -->
+  <div class="modal fade" id="modalImportCustomers" tabindex="-1" aria-labelledby="modalImportCustomersLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="staticBackdropLabel">Upload Customer Resources</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <h5 class="modal-title" id="staticBackdropLabel">Import Customers</h5>
         </div>
 
         <div class="modal-body">
           <form>
-            <div class="mb-3">
-              <label for="exampleFormControlInput1" class="form-label">Choose your file type to upload</label>
-              <select class="form-select" aria-label="Default select example">
-                <!-- <option selected>Open this select menu</option> -->
-                <option selected value="customer_id_mapping">Customer ID Mapping</option>
-                <option value="post_paid_account">Post-paid Account</option>
-                <option value="rpmax_account">RPMAX Account</option>
-              </select>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Browse your computer</label>
+            <div class="form-group mb-3">
               <div class="upload-container">
                 <div class="border-container">
-                  <input type="file" id="customer-file-upload" class="form-control">
+                  <input type="file" class="form-control" id="inputFileImport" style="height: 100%;">
                 </div>
               </div>
             </div>
@@ -82,14 +71,14 @@
         </div>
 
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          <button type="button" class="btn btn-primary">Upload</button>
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-primary">Import</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Edit Modal -->
+  <!-- Edit Customer Modal -->
   <div class="modal fade" id="modal-edit-customer" tabindex="-1" aria-labelledby="modal-edit-customer-label" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
       <div class="modal-content">
@@ -97,9 +86,8 @@
         <div class="modal-header">
           <h5 class="modal-title">Edit Customer</h5>
         </div>
-        <!-- bode -->
+        <!-- body -->
         <div class="modal-body">
-          <form>
             <div class="form-row">
               <div class="form-group col-md-6">
                 <label for="inputID">ID</label>
@@ -157,12 +145,11 @@
               </div>
             </div>
             <!--  -->
-          </form>
         </div>
         <!-- footer -->
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-          <button type="button" class="btn btn-primary">Save</button>
+          <button type="button" class="btn btn-primary" id="saveCustomerEdited">Save</button>
         </div>
         <!--  -->
       </div>
