@@ -215,6 +215,30 @@
   </div>
 
   <!-- Delete Customer Modal -->
+  <div class="modal fade" id="modalDeleteCustomer" tabindex="-1" aria-labelledby="modalDeleteCustomerLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <!-- header  -->
+        <div class="modal-header">
+          <h5 class="modal-title">Delete Customer</h5>
+        </div>
+        <!-- body -->
+        <div class="modal-body">
+          <p>Are you sure to delete this customer ?</p>
+        </div>
+        <!-- footer -->
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">No</button>
+          <button type="button" class="btn btn-danger" id="confirmDeleteCustomerButton">
+            <span class="spinner-button spinner-border spinner-border-sm hide" role="status" aria-hidden="true"></span>
+            <span class="text-button ml-2">Yes</span>
+          </button>
+        </div>  
+        <!--  -->
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <?php require_once APPROOT . "/views/layout/script.php"; ?>

@@ -44,17 +44,23 @@ class Customer
     return $result;
   }
 
-  public function getCustomers($offset, $limit)
+  public function getCustomers($offset, $limit, $order_by, $where)
   {
     try {
       $mainDB = $this->db->dbCon();
-      $sql = "SELECT * FROM remaining_budget_customers ORDER BY parent_id ASC, main_business DESC LIMIT {$offset}, {$limit}";
+      $sql = "SELECT * FROM remaining_budget_customers {$where} {$order_by} LIMIT {$offset}, {$limit}";
       $stmt = $mainDB->prepare($sql);
-      // $stmt->bindParam("limit", $limit, PDO::PARAM_INT);
-      // $stmt->bindParam("offset", $offset, PDO::PARAM_INT);
       $stmt->execute();
+      $result["data"]["customers"] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+      $sql2 = "SELECT COUNT(*) AS rowCount FROM remaining_budget_customers {$where} {$order_by}";
+      $stmt2 = $mainDB->prepare($sql2);
+      $stmt2->execute();
+      $fetch_row_count = $stmt2->fetch(PDO::FETCH_ASSOC);
+      $result["data"]["total_customers"] = $fetch_row_count["rowCount"];
+      
       $result["status"] = "success";
-      $result["data"] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
     } catch (PDOException $e) {
       $result["status"] = "error";
       $result["data"] = $e->getMessage();
@@ -275,6 +281,24 @@ class Customer
       $result["status"] = "success";
       $result["data"] = "";
 
+    } catch (PDOException $e) {
+      $result["status"] = "error";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+  public function deleteCustomer($id)
+  {
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "DELETE FROM remaining_budget_customers WHERE id = :id";
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("id", $id);
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = "";
     } catch (PDOException $e) {
       $result["status"] = "error";
       $result["data"] = $e->getMessage();

@@ -274,38 +274,122 @@ class CustomersController extends Controller
   public function getCustomers()
   {
     header("Content-Type: application/json");
-
+    // print_r($_GET);
     $query_string = $this->getQueryString();
     $offset = $query_string["start"];
     $limit = $query_string["length"];
+    $columns = $query_string["columns"];
+    $orders = isset($query_string["order"]) ? $query_string["order"] : NULL;
+    $search = isset($query_string["search"]) ? $query_string["search"] : NULL;
+
+    // filtering
+
+    // searching
+    $where = '';
+    if (!empty($search) || $search['value'] == '') {
+      $kw = $search['value'];
+      if ($kw !== '') {
+        $where .= "WHERE ";
+        $where .= "id LIKE '%{$kw}%' OR ";
+        $where .= "grandadmin_customer_id LIKE '%{$kw}%' OR ";
+        $where .= "grandadmin_customer_name LIKE '%{$kw}%' OR ";
+        $where .= "offset_acct LIKE '%{$kw}%' OR ";
+        $where .= "offset_acct_name LIKE '%{$kw}%' OR ";
+        $where .= "company LIKE '%{$kw}%' OR ";
+        $where .= "parent_id LIKE '%{$kw}%' OR ";
+        $where .= "payment_method LIKE '%{$kw}%' OR ";
+        // $where .= "created_at LIKE '%{$kw}%' OR ";
+        // $where .= "updated_at LIKE '%{$kw}%' OR ";
+        $where .= "updated_by LIKE '%{$kw}%'";
+      }
+    }
+
+    // echo $where . "--------->";
+
+    // ordering
+    $order_by = '';
+    if (!empty($orders) && count($orders) > 0) {
+
+      foreach ($orders as $order) {
+        $col_name = $columns[$order['column']]['data'];
+        $order_by .= $this->mapColumn($col_name, strtoupper($order['dir'])) ;
+      }
+
+      if ($order_by !== "") {
+        $order_by = rtrim($order_by, ", ");
+        $order_by = 'ORDER BY ' . $order_by;
+      }
+
+      // echo "------>" . $order_by . "-------->";
+    }
 
     $get_total_all_customers = $this->customerModel->getTotalAllCustomers();
-    $get_customers = $this->customerModel->getCustomers($offset, $limit);
-    // $customers = array();
-    // foreach ($get_customers["data"] as $key => $val) {
-    //   $temp_array = array(
-    //     $val["parent_id"],
-    //     $val["grandadmin_customer_id"],
-    //     $val["grandadmin_customer_name"],
-    //     $val["offset_acct"],
-    //     $val["offset_acct_name"],
-    //     $val["company"],
-    //     $val["payment_method"],
-    //     $val["created_at"],
-    //     $val["updated_at"],
-    //     $val["updated_by"]
-    //   );
-
-    //   array_push($customers, $temp_array);
-    // }
+    $get_customers = $this->customerModel->getCustomers($offset, $limit, $order_by, $where);
 
     $response = array (
       "draw" => $query_string["draw"],
       "recordsTotal" => $get_total_all_customers["data"],
-      "recordsFiltered" => $get_total_all_customers["data"],
-      "data" => $get_customers["data"]
+      "recordsFiltered" => $get_customers["data"]["total_customers"],
+      "data" => $get_customers["data"]["customers"]
     );
     echo json_encode($response);
+  }
+
+  private function mapColumn($col_name, $dir)
+  {
+    switch ($col_name) {
+      case 'id':
+        return "id {$dir}, ";
+        break;
+
+      case 'parent_id':
+        return "parent_id {$dir}, ";
+        break;
+
+      case 'grandadmin_customer_id':
+        return "grandadmin_customer_id {$dir}, ";
+        break;
+
+      case 'grandadmin_cusotomer_name':
+        return "grandadmin_cusotomer_name {$dir}, ";
+        break;
+
+      case 'offset_acct':
+        return "offset_acct {$dir}, ";
+        break;
+
+      case 'offset_acct_name':
+        return "offset_acct_name {$dir}, ";
+        break;
+
+      case 'company':
+        return "company {$dir}, ";
+        break;
+
+      case 'payment_method':
+        return "payment_method {$dir}, ";
+        break;
+
+      case 'created_at':
+        return "created_at {$dir}, ";
+        break;
+
+      case 'updated_at':
+        return "updated_at {$dir}, ";
+        break;
+
+      case 'updated_by':
+        return "updated_by {$dir}, ";
+        break;
+
+      case 'main_business':
+        return "main_business {$dir}, ";
+        break;
+      
+      default:
+        return "";
+        break;
+    }
   }
 
   public function editCustomer()
@@ -361,6 +445,39 @@ class CustomersController extends Controller
         "message" => "Accept only POST method"
       );
       echo json_encode($response);
+    }
+  }
+
+  public function deleteCustomer()
+  {
+    header("Content-Type: application/json", true);
+    if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+      if ( $_SERVER['REQUEST_METHOD'] == 'POST' && empty($_POST) ) {
+        $_POST = json_decode(file_get_contents('php://input'), true);
+      }
+      
+      $id = $_POST['id'];
+
+      if (empty($id)) {
+        $res = array(
+          'status' => 'error',
+          'message' => 'Not found id'
+        );
+        echo json_encode($res);
+      } else {
+        $this->customerModel->deleteCustomer($id);
+        $res = array(
+          'status' => 'success',
+          'message' => 'Successfully deleted'
+        );
+        echo json_encode($res);
+      }
+    } else {
+      $res = array(
+        'status' => 'error',
+        'message' => 'Allow only POST method'
+      );
+      echo json_encode($res);
     }
   }
 }

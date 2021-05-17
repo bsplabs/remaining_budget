@@ -1,9 +1,16 @@
 var current_row = "";
+var current_id_selected = '';
 
 $(document).ready(function () {
   var customer_table = $("#customers-table").DataTable({
     processing: true,
     serverSide: true,
+    ordering: true,
+    orderMulti: true,
+    order: [
+      [1, 'asc'],
+      [6, 'desc']
+    ],
     ajax: base_url + "/customers/get-customers",
     columns: [
       { data: "id" },
@@ -14,6 +21,7 @@ $(document).ready(function () {
       { data: "offset_acct_name" },
       {
         class: "text-center",
+        // orderable: false,
         data: "main_business",
         render: function (data, type) {
           if (data == 0) {
@@ -73,6 +81,45 @@ $(document).ready(function () {
     scrollX: true,
   });
 
+  $("#customers-table tbody").on("click", ".delete-customer", function () {
+    current_id_selected = $(this).attr('data-customer-id');
+    $('#modalDeleteCustomer').modal('toggle');
+  });
+
+  $('#confirmDeleteCustomerButton').click(function() {
+    $('#confirmDeleteCustomerButton .spinner-button').removeClass('hide');
+    var data = {
+      "id": current_id_selected
+    };
+
+    $.ajax({
+      url: base_url + '/customers/delete-customer',
+      type: 'POST',
+      data: JSON.stringify(data),
+      cache: false,
+      processData: false,
+      success: function(res) {
+        $('#modalDeleteCustomer').modal('toggle');
+        $('#confirmDeleteCustomerButton .spinner-button').removeClass('hide').addClass('hide');
+        if (res.status === 'success') {
+          customer_table.ajax.reload(function () {
+            Swal.fire({
+              icon: "success",
+              title: "Successfully Deleted",
+              text: "",
+            });
+          }, false);
+        } else {
+          Swal.fire({
+            icon: "error",
+            title: "Oops...",
+            text: res.message,
+          });
+        }
+      }
+    });
+  });
+
   $("#customers-table tbody").on("click", ".edit-customer", function () {
     var customer_data = customer_table.row($(this).parents("tr")).data();
     current_row = $(this).parents("tr");
@@ -125,7 +172,7 @@ $(document).ready(function () {
           customer_table.ajax.reload(function () {
             Swal.fire({
               icon: "success",
-              title: "Successfully Update",
+              title: "Successfully Updated",
               text: "",
             });
           }, false);
@@ -136,7 +183,7 @@ $(document).ready(function () {
             text: res.message,
           });
         }
-      },
+      }
     });
   });
 
