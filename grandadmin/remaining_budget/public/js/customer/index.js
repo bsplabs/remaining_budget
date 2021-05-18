@@ -2,12 +2,13 @@ var current_row = "";
 var current_id_selected = '';
 
 $(document).ready(function () {
+
   var customer_table = $("#customers-table").DataTable({
     processing: true,
     serverSide: true,
     ordering: true,
     orderMulti: true,
-    scrollY: '60vh',
+    scrollY: '50vh',
     scrollCollapse: true,
     bLengthChange: false,
     pageLength: 100,
@@ -15,7 +16,14 @@ $(document).ready(function () {
       [1, 'asc'],
       [6, 'desc']
     ],
-    ajax: base_url + "/customers/get-customers",
+    ajax: {
+      url: base_url + "/customers/get-customers",
+      type: 'POST',
+      data: {
+        filter_parentid: 'more_than_one',
+        filter_payment: 'all'
+      }
+    },
     columns: [
       { data: "id" },
       { data: "parent_id" },

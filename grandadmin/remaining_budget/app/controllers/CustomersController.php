@@ -274,13 +274,15 @@ class CustomersController extends Controller
   public function getCustomers()
   {
     header("Content-Type: application/json");
-    // print_r($_GET);
-    $query_string = $this->getQueryString();
-    $offset = $query_string["start"];
-    $limit = $query_string["length"];
-    $columns = $query_string["columns"];
-    $orders = isset($query_string["order"]) ? $query_string["order"] : NULL;
-    $search = isset($query_string["search"]) ? $query_string["search"] : NULL;
+    // print_r($_POST);
+    // $query_string = $this->getQueryString();
+    // echo 'qr ----------> ';
+    // print_r($query_string);
+    $offset = $_POST["start"];
+    $limit = $_POST["length"];
+    $columns = $_POST["columns"];
+    $orders = isset($_POST["order"]) ? $_POST["order"] : NULL;
+    $search = isset($_POST["search"]) ?$_POST["search"] : NULL;
 
     // filtering
 
@@ -322,7 +324,7 @@ class CustomersController extends Controller
     $get_customers = $this->customerModel->getCustomers($offset, $limit, $order_by, $where);
 
     $response = array (
-      "draw" => $query_string["draw"],
+      "draw" => $_POST["draw"],
       "recordsTotal" => $get_total_all_customers["data"],
       "recordsFiltered" => $get_customers["data"]["total_customers"],
       "data" => $get_customers["data"]["customers"]

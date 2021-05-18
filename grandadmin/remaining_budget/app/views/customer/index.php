@@ -14,8 +14,50 @@
   <br>
   <div class="row">
     <div class="col-md-6">
-      <h2>Customers</h2>
-      <p class="mb-0">This page show you all customers and you could upload customer resources file to edit customers</p>
+      <h2>Customers Management</h2>
+      <!-- <p class="mb-0">This page show you all customers and you could upload customer resources file to edit customers</p> -->
+    </div>
+    <!-- <div class="col-md-6 text-right">
+      
+    </div> -->
+  </div>
+
+  <hr>
+
+  <div class="row  p-2 m-0 mb-2">
+    <div class="col-md-6 p-0">
+      <!-- <button> <span> <i class='bx bx-filter'></i> Filter </span> </button> -->
+      <!--  -->
+      <div class="border p-2 mt-2 rounded">
+      <div class="form-group row">
+        <label for="filterParentId" class="col-sm-3 col-form-label">Parent ID</label>
+        <div class="col-sm-5">
+          <select name="" id="filterParentId" class="form-control">
+            <option value="">All</option>
+            <option value="">More than one child</option>
+            <option value="">One child</option>
+          </select>
+        </div>
+      </div>
+      <!--  -->
+      <!--  -->
+      <div class="form-group row">
+        <label for="filterPaymentMethod" class="col-sm-3 col-form-label">Payment Method</label>
+        <div class="col-sm-5">
+          <select name="" id="filterPaymentMethod" class="form-control">
+            <option value="">All</option>
+            <option value="">Prepaid</option>
+            <option value="">Postpaid</option>
+          </select>
+        </div>
+      </div>
+      <!--  -->
+      <!--  -->
+      <!-- <div class="form-group row">
+        <button class="btn btn-default">Filter</button>
+      </div> -->
+      <!--  -->
+      </div>
     </div>
     <div class="col-md-6 text-right">
       <button type="button" class="btn btn-primary" id="importCustomers"><i class='bx bx-add-to-queue'></i> Add / Replace</button>
