@@ -304,23 +304,18 @@ class CustomersController extends Controller
       }
     }
 
-    // echo $where . "--------->";
-
     // ordering
     $order_by = '';
     if (!empty($orders) && count($orders) > 0) {
-
       foreach ($orders as $order) {
         $col_name = $columns[$order['column']]['data'];
-        $order_by .= $this->mapColumn($col_name, strtoupper($order['dir'])) ;
+        $order_by .= $this->mappingColumn($col_name, strtoupper($order['dir'])) ;
       }
 
       if ($order_by !== "") {
         $order_by = rtrim($order_by, ", ");
         $order_by = 'ORDER BY ' . $order_by;
       }
-
-      // echo "------>" . $order_by . "-------->";
     }
 
     $get_total_all_customers = $this->customerModel->getTotalAllCustomers();
@@ -335,7 +330,7 @@ class CustomersController extends Controller
     echo json_encode($response);
   }
 
-  private function mapColumn($col_name, $dir)
+  private function mappingColumn($col_name, $dir)
   {
     switch ($col_name) {
       case 'id':
@@ -408,6 +403,11 @@ class CustomersController extends Controller
         // check parent id
         $check_parent_id = $this->customerModel->checkParentID($customerData["parent_id"]);
         if ($check_parent_id["status"] === "success" && $check_parent_id["data"] > 0) {
+          // if main business == true --> reset all main business same parent id
+          // clear main business
+          if ($customerData['main_business'] == true || $customerData['main_business'] === 'true') {
+            $this->customerModel->resetMainBusiness($customerData['parent_id']);
+          }
           $update_customer = $this->customerModel->updateCustomer($customerData);
           if ($update_customer["status"] === 'success') {
             $response = array(
@@ -465,6 +465,107 @@ class CustomersController extends Controller
         );
         echo json_encode($res);
       } else {
+        // check id on report table
+        $check_id_exists = $this->customerModel->checkIdIsReconcile('remaining_budget_report', $id);
+        if ($check_id_exists["data"] > 0) {
+          $res = array(
+            'status' => 'error',
+            'message' => 'Can\'t delete this customer because its id is already mapped'
+          );
+          echo json_encode($res);
+          exit;
+        }
+
+        $check_id_exists = $this->customerModel->checkIdIsReconcile('remaining_budget_media_wallet', $id);
+        if ($check_id_exists["data"] > 0) {
+          $res = array(
+            'status' => 'error',
+            'message' => 'Can\'t delete this customer because its id is already mapped'
+          );
+          echo json_encode($res);
+          exit;
+        }
+
+        $check_id_exists = $this->customerModel->checkIdIsReconcile('remaining_budget_withholding_tax', $id);
+        if ($check_id_exists["data"] > 0) {
+          $res = array(
+            'status' => 'error',
+            'message' => 'Can\'t delete this customer because its id is already mapped'
+          );
+          echo json_encode($res);
+          exit;
+        }
+
+        $check_id_exists = $this->customerModel->checkIdIsReconcile('remaining_budget_free_click_cost', $id);
+        if ($check_id_exists["data"] > 0) {
+          $res = array(
+            'status' => 'error',
+            'message' => 'Can\'t delete this customer because its id is already mapped'
+          );
+          echo json_encode($res);
+          exit;
+        }
+
+        $check_id_exists = $this->customerModel->checkIdIsReconcile('remaining_budget_remaining_ice', $id);
+        if ($check_id_exists["data"] > 0) {
+          $res = array(
+            'status' => 'error',
+            'message' => 'Can\'t delete this customer because its id is already mapped'
+          );
+          echo json_encode($res);
+          exit;
+        }
+
+        $check_id_exists = $this->customerModel->checkIdIsReconcile('remaining_budget_gl_cash_advance', $id);
+        if ($check_id_exists["data"] > 0) {
+          $res = array(
+            'status' => 'error',
+            'message' => 'Can\'t delete this customer because its id is already mapped'
+          );
+          echo json_encode($res);
+          exit;
+        }
+
+        $check_id_exists = $this->customerModel->checkIdIsReconcile('remaining_budget_google_spending', $id);
+        if ($check_id_exists["data"] > 0) {
+          $res = array(
+            'status' => 'error',
+            'message' => 'Can\'t delete this customer because its id is already mapped'
+          );
+          echo json_encode($res);
+          exit;
+        }
+
+        $check_id_exists = $this->customerModel->checkIdIsReconcile('remaining_budget_facebook_spending', $id);
+        if ($check_id_exists["data"] > 0) {
+          $res = array(
+            'status' => 'error',
+            'message' => 'Can\'t delete this customer because its id is already mapped'
+          );
+          echo json_encode($res);
+          exit;
+        }
+
+        $check_id_exists = $this->customerModel->checkIdIsReconcile('remaining_budget_wallet_transfer', $id);
+        if ($check_id_exists["data"] > 0) {
+          $res = array(
+            'status' => 'error',
+            'message' => 'Can\'t delete this customer because its id is already mapped'
+          );
+          echo json_encode($res);
+          exit;
+        }
+
+        $check_id_exists = $this->customerModel->checkIdIsReconcile('remaining_budget_first_remaining', $id);
+        if ($check_id_exists["data"] > 0) {
+          $res = array(
+            'status' => 'error',
+            'message' => 'Can\'t delete this customer because its id is already mapped'
+          );
+          echo json_encode($res);
+          exit;
+        }
+
         $this->customerModel->deleteCustomer($id);
         $res = array(
           'status' => 'success',

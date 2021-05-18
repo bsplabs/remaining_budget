@@ -159,13 +159,9 @@
             </div>
             <!--  -->
             <div class="form-row">
-              <div class="form-group col-md-6">
+              <div class="form-group col-md-12">
                 <label for="inputCustomerID">Customer ID</label>
                 <input type="text" class="form-control" id="inputCustomerID">
-              </div>
-              <div class="form-group col-md-6">
-                <label for="inputOffsetAcct">Offset Acct</label>
-                <input type="text" class="form-control" id="inputOffsetAcct">
               </div>
             </div>
             <!--  -->
@@ -173,6 +169,13 @@
               <div class="form-group col-md-12">
                 <label for="inputCustomerName">Customer Name</label>
                 <input type="text" class="form-control" id="inputCustomerName">
+              </div>
+            </div>
+            <!--  -->
+            <div class="form-row">
+              <div class="form-group col-md-12">
+                <label for="inputOffsetAcct">Offset Acct</label>
+                <input type="text" class="form-control" id="inputOffsetAcct">
               </div>
             </div>
             <!--  -->
@@ -186,11 +189,19 @@
             <div class="form-row">
               <div class="form-group col-md-6">
                 <label for="inputCompany">Company</label>
-                <input type="text" class="form-control" id="inputCompany">
+                <!-- <input type="text" class="form-control" id="inputCompany"> -->
+                <select class="form-control" id="inputCompany">
+                  <option value="RPTH">RPTH</option>
+                  <!-- <option value="MAX">MAX</option> -->
+                </select>
               </div>
               <div class="form-group col-md-6">
                 <label for="inputPaymentMethod">Payment Method</label>
-                <input type="text" class="form-control" id="inputPaymentMethod">
+                <!-- <input type="text" class="form-control" id="inputPaymentMethod"> -->
+                <select class="form-control" id="inputPaymentMethod">
+                  <option value="prepaid">prepaid</option>
+                  <!-- <option value="postpaid">postpaid</option> -->
+                </select>
               </div>
             </div>
             <!--  -->

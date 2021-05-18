@@ -7,6 +7,10 @@ $(document).ready(function () {
     serverSide: true,
     ordering: true,
     orderMulti: true,
+    scrollY: '60vh',
+    scrollCollapse: true,
+    bLengthChange: false,
+    pageLength: 100,
     order: [
       [1, 'asc'],
       [6, 'desc']

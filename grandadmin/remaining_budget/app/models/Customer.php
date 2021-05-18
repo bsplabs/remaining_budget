@@ -109,6 +109,24 @@ class Customer
     return $result;
   }
 
+  public function resetMainBusiness($parent_id)
+  {
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "UPDATE remaining_budget_customers SET main_business = 0 WHERE parent_id = :parent_id";
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("parent_id", $parent_id);
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = "";
+    } catch (PDOException $e) {
+      $result["status"] = "error";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
   public function updateCustomer($customer_data)
   {
     try {
@@ -299,6 +317,26 @@ class Customer
       $stmt->execute();
       $result["status"] = "success";
       $result["data"] = "";
+    } catch (PDOException $e) {
+      $result["status"] = "error";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+  public function checkIdIsReconcile($table, $id)
+  {
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "SELECT COUNT(*) as rowCount FROM {$table} WHERE remaining_budget_customer_id = :id";
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("id", $id);
+      $stmt->execute();
+      $fetch_row_count = $stmt->fetch(PDO::FETCH_ASSOC);
+      $row_count = $fetch_row_count["rowCount"];
+      $result["status"] = "success";
+      $result["data"] = $row_count;
     } catch (PDOException $e) {
       $result["status"] = "error";
       $result["data"] = $e->getMessage();
