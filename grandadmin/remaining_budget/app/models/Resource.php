@@ -232,7 +232,7 @@ class Resource
   {
     try {
       $mainDB = $this->db->dbCon("latin1");
-      $sql = "SELECT id FROM remaining_budget_customers WHERE grandadmin_customer_id = :grandadmin_customer_id and grandadmin_customer_name = :grandadmin_customer_name order by is_parent limit 1;";
+      $sql = "SELECT id FROM remaining_budget_customers WHERE grandadmin_customer_id = :grandadmin_customer_id and grandadmin_customer_name = :grandadmin_customer_name order by is_parent limit 1";
       $stmt = $mainDB->prepare($sql);
       $stmt->bindParam("grandadmin_customer_id", $grandadmin_customer_id);
       $stmt->bindParam("grandadmin_customer_name", $grandadmin_customer_name);

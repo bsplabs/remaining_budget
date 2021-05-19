@@ -282,13 +282,35 @@ class FreeClickCostResources
     return $result;
   }
 
+  public function clearFreeClickCostByMonthYear($month, $year)
+  {
+    try {
+      $mainDB = $this->db->dbCon();
+     
+      $sql = "DELETE FROM remaining_budget_free_click_cost WHERE month = :month AND year = :year";
+      
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("month", $month);
+      $stmt->bindParam("year", $year);
+
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = "";
+
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
   public function run()
   {
     //echo "\n ######################################## \n";
     $last_month_timestamp =  strtotime("-1 month");
     $primary_month = date("m", $last_month_timestamp);
     $primary_year = date("Y", $last_month_timestamp);
-    //echo " - Get month and year target ==> " . $year . "-" . $month . "\n";
 
     $get_month_year = $this->getMonthYearFromReportStatusTable();
     if (empty($get_month_year["data"])) {
@@ -299,32 +321,27 @@ class FreeClickCostResources
       );
     }
 
-    foreach ($get_month_year["data"] as $key => $val) {
+    foreach ($get_month_year["data"] as $key => $val) 
+    {
       $get_free_click_cost = $this->getFreeClickCost($val["month"], $val["year"]);
-
-      // echo "Month: {$val['month']}, Year: {$val['year']} ----------------------> \n";
-      // echo "Founded: " . count($get_free_click_cost["data"]) . "\n";
-      // echo "\n";
-      // // print_r($get_free_click_cost);
-      // echo "\n ---------------------------------------------------------------------- \n";
 
       if (empty($get_free_click_cost["data"])) continue;
 
-      foreach ($get_free_click_cost["data"] as $free_click_cost) {
+      // clear free click cost data by month and year
+      $this->clearFreeClickCostByMonthYear($val["month"], $val["year"]);
+      $this->updateReportStatus($val["month"], $val["year"], "free_click_cost", "pending");
+
+      foreach ($get_free_click_cost["data"] as $free_click_cost) 
+      {
         $customerData = array(
           "grandadmin_customer_id" => $free_click_cost["CustomerID"] ? $free_click_cost["CustomerID"] : "",
           "grandadmin_customer_name" => $free_click_cost["grandadmin_customer_name"] ? $free_click_cost["grandadmin_customer_name"] : ""
         );
-
         $getRemainingBudgetCustomerID = $this->remainingBudgetCustomer->getRemainingBudgetCustomerID($customerData);
         $free_click_cost["remaining_budget_customer_id"] = $getRemainingBudgetCustomerID;
 
-        $checkFreeClickCostDataExists = $this->checkFreeClickCostDataExists($val["month"], $val["year"], $free_click_cost);
-        if ($checkFreeClickCostDataExists["data"] > 0) {
-          $this->updateFreeClickCost($val["month"], $val["year"], $free_click_cost);
-        } else {
-          $this->insertFreeClickCost($val["month"], $val["year"], $free_click_cost); 
-        }
+        // insert free click cost
+        $this->insertFreeClickCost($val["month"], $val["year"], $free_click_cost); 
       }
 
       $this->updateReportStatus($val["month"], $val["year"], "free_click_cost", "waiting");

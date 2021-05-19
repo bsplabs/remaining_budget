@@ -271,6 +271,29 @@ class WithholdingTaxResources
     return $result;
   }
 
+  public function clearWithholdingTaxByMonthYear($month, $year)
+  {
+    try {
+      $mainDB = $this->db->dbCon();
+     
+      $sql = "DELETE FROM remaining_budget_withholding_tax WHERE month = :month AND year = :year";
+      
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("month", $month);
+      $stmt->bindParam("year", $year);
+
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = "";
+
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
   function run()
   {
     $last_month_timestamp =  strtotime("-1 month");
@@ -286,19 +309,19 @@ class WithholdingTaxResources
       );
     }
 
-    foreach ($get_month_year["data"] as $key => $val) {
+    foreach ($get_month_year["data"] as $key => $val) 
+    {
       $sixthDateOfMonth = $val["year"] . "-" . $val["month"] . "-" . "06";
       $get_withholding_tax = $this->getWithholdingTax($sixthDateOfMonth);
       
-      // echo "Month: {$val['month']}, Year: {$val['year']} ----------------------> \n";
-      // echo "Founded: " . count($get_withholding_tax["data"]) . "\n";
-      // echo "\n";
-      // // print_r($get_withholding_tax);
-      // echo "\n------------------------------------------------------------------\n";
-      
       if (empty($get_withholding_tax["data"])) continue;
-      
-      foreach ($get_withholding_tax["data"] as $withholding_tax) {
+
+      // clear withholding tax data by month and year
+      $this->clearWithholdingTaxByMonthYear($val["month"], $val["year"]);
+      $this->updateReportStatus($val["month"], $val["year"], "withholding_tax", "pending");
+
+      foreach ($get_withholding_tax["data"] as $withholding_tax) 
+      {
         $getCustomerName = $this->getCustomerName($withholding_tax);
         if ($getCustomerName["status"] == "success" && !empty($getCustomerName["data"])) {
           if ($getCustomerName["data"]["bill_company"] !== "") {
@@ -319,18 +342,10 @@ class WithholdingTaxResources
         $getRemainingCustomerID = $this->remainingBudgetCustomer->getRemainingBudgetCustomerID($customerData);
         $withholding_tax["remaining_budget_customer_id"] = $getRemainingCustomerID;
   
-        $checkWithholdingTaxExists = $this->checkWithholdingTaxExists($val["month"], $val["year"], $withholding_tax);
-        // print_r($checkWithholdingTaxExists);
-        // echo "\n";
-        if ($checkWithholdingTaxExists["data"]) {
-          $update = $this->updateWithholdingTax($val["month"], $val["year"], $withholding_tax);
-        } else {
-          $insert = $this->insertWithholdingTax($val["month"], $val["year"], $withholding_tax);
-        }  
+        $insert = $this->insertWithholdingTax($val["month"], $val["year"], $withholding_tax);
       }
 
       $this->updateReportStatus($val["month"], $val["year"], "withholding_tax", "waiting");
-    
     }
   }
 }

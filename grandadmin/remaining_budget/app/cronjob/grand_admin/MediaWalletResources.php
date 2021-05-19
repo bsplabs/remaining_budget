@@ -301,19 +301,17 @@ class MediaWalletResources
     return $result;
   }
 
-  public function testInsertLatin() 
-  {
-
-  }
-
-  function testGetLatin()
+  public function clearMediaWalletByMonthYear($month, $year)
   {
     try {
-      $mainDB = $this->db->dbCon('latin1');
+      $mainDB = $this->db->dbCon();
+     
+      $sql = "DELETE FROM remaining_budget_media_wallet WHERE month = :month AND year = :year";
       
-      $sql = "";
-
       $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("month", $month);
+      $stmt->bindParam("year", $year);
+
       $stmt->execute();
       $result["status"] = "success";
       $result["data"] = "";
@@ -328,7 +326,7 @@ class MediaWalletResources
 
   public function run()
   {
-    echo "\n ######################################## \n";
+    // echo "\n ######################################## \n";
     $last_month_timestamp =  strtotime("-1 month");
     $primary_month = date("m", $last_month_timestamp);
     $primary_year = date("Y", $last_month_timestamp);
@@ -342,31 +340,27 @@ class MediaWalletResources
       );
     }
 
-    foreach ($get_month_year["data"] as $key => $val) {
+    foreach ($get_month_year["data"] as $key => $val) 
+    {
       $get_media_wallet = $this->getMediaWallet($val["month"], $val["year"]);
-      echo $val["month"] . " - " . $val["year"] . " --------------------------------------------------> \n";
-      echo "Founded: " . count($get_media_wallet["data"]) . " rows \n";
-      echo "\n";
 
       if (empty($get_media_wallet["data"])) continue;
 
-      foreach ($get_media_wallet["data"] as $media_wallet) {
+      // clear media wallet data by month and year
+      $this->clearMediaWalletByMonthYear($val["month"], $val["year"]);
+      $this->updateReportStatus($val["month"], $val["year"], "media_wallet", "pending");
+
+      foreach ($get_media_wallet["data"] as $media_wallet) 
+      {
         $customerData = array(
           "grandadmin_customer_id" => $media_wallet["grandadmin_customer_id"],
           "grandadmin_customer_name" => $media_wallet["grandadmin_customer_name"]
         );
         $getRemainingBudgetCustomerID = $this->remainingBudgetCustomer->getRemainingBudgetCustomerID($customerData);
         $media_wallet["remaining_budget_customer_id"] = $getRemainingBudgetCustomerID;
-        $checkWalletDataExists = $this->checkWalletDataExists($val["month"], $val["year"], $media_wallet);
-        // print_r($checkWalletDataExists);
-        if ($checkWalletDataExists["data"] == 0) {
-          $add_media_wallet = $this->addNewMediaWallet($val["month"], $val["year"], $media_wallet);
-          // print_r($add_media_wallet);
-          // echo "   - CustomerID: " . $media_wallet["grandadmin_customer_id"] . " ==> Add \n";
-        } else {
-          $this->updateMediaWallet($val["month"], $val["year"], $media_wallet);
-          // echo "   - CustomerID: " . $media_wallet["grandadmin_customer_id"] . " ==> Update \n";
-        }
+
+        // insert media wallet
+        $add_media_wallet = $this->addNewMediaWallet($val["month"], $val["year"], $media_wallet);
       }
 
       $this->updateReportStatus($val["month"], $val["year"], "media_wallet", "waiting");

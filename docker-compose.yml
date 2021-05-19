@@ -2,7 +2,8 @@ version: "2"
 services:
   # Web Service
   www:
-    image: orsolin/docker-php-5.3-apache
+    build: .
+    # image: orsolin/docker-php-5.3-apache
     container_name: web
     ports:
       - "80:80"

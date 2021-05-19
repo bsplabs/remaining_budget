@@ -3,8 +3,10 @@
 
 date_default_timezone_set('Asia/Bangkok');
 
-$sttime = strtotime("1/4/2021");
-echo $sttime;
+echo 1133/100;
+
+// $sttime = strtotime("1/4/2021");
+// echo $sttime;
 // header('Content-Type: text/html; charset=UTF-8');
 // $last_month_time_str =  strtotime("-1 month");
 // echo date("y", $last_month_time_str);
