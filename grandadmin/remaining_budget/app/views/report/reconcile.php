@@ -1,13 +1,15 @@
 <link href="<?php echo BASE_URL; ?>/public/css/home.css" rel="stylesheet">
 <link href="<?php echo BASE_URL; ?>/public/css/report.css" rel="stylesheet">
 <link href="<?php echo BASE_URL; ?>/public/css/font-awesome.min.css" rel="stylesheet">
+<link href="<?php echo BASE_URL; ?>/public/vendors/datatables_bootstrap4/dataTables.bootstrap4.min.css" rel="stylesheet">
+<link href="<?php echo BASE_URL; ?>/public/vendors/datatables_bootstrap4/fixedColumns.dataTables.min.css" rel="stylesheet">
 <script>
 var base_url = "<?php echo BASE_URL; ?>";
 var year = "<?php echo $data["year"];?>";
 var month = "<?php echo $data["month"];?>";
+var is_closed = "<?php echo $data["is_closed"];?>";
 </script>
 <?php require_once APPROOT . "/views/layout/head.php"; ?>
-
 <div class="container-fluid report-reconcile-page">
   <br>
   <!-- MONTH/YEAR SELECTION -->
@@ -28,14 +30,61 @@ var month = "<?php echo $data["month"];?>";
     </div>
   </div>
   <!--  -->
-
-  <div class="d-flex justify-content-end mt-3">
-    <button class="btn btn-primary" data-bs-toggle="modal" href="#modal" role="button"><i class='bx bx-add-to-queue'></i> Add / Replace</button>
-    <button class="btn btn-warning" style="margin-left: 5px;" data-bs-toggle="modal" href="#modal" role="button"><i class='bx bx-export'></i> Export</button>
+  <div class="row">
+    <div class="col-md-5">
+    <!-- <button id="reconcile_quick_view_btn" class="btn btn-reset" data-bs-toggle="modal" role="button"><i class='bx bx-columns'></i></button>
+    <button id="reconcile_full_view_btn" class="btn btn-reset" data-bs-toggle="modal" role="button"><i class='bx bx-table'></i></button> -->
+      <label id="filter-container-btn" style="cursor:pointer;"><i class='bx bx-filter-alt'></i> Filter </label>
+      <div id="filter-container">
+        <div class="form-inline" style="padding-top:10px;">
+          <label style="padding-right:33px;">Cash Advance</label>
+          <select class="form-control form-control-sm" id="filter_cash_advance_condition">
+            <option value="equal">Equal</option>
+            <option value="less_than">Less than</option>
+            <option value="greater_than">Greater than</option>
+            <option value="not_equal">Not equal</option>
+          </select>
+          <input id="filter_cash_advance" style="margin-left:10px;" class="form-control form-control-sm" type="text" placeholder="">
+        </div>
+        <div class="form-inline" style="padding-top:10px;">
+          <label style="padding-right:10px;">Remaining Budget</label>
+          <select class="form-control form-control-sm" id="filter_remaining_budget_condition">
+            <option value="equal">Equal</option>
+            <option value="less_than">Less than</option>
+            <option value="greater_than">Greater than</option>
+            <option value="not_equal">Not equal</option>
+          </select>
+          <input id="filter_remaining_budget" style="margin-left:10px;" class="form-control form-control-sm" type="text" placeholder="">
+        </div>
+        <div class="form-inline" style="padding-top:10px;">
+          <label style="padding-right:55px;">Difference</label>
+          <select class="form-control form-control-sm" id="filter_difference_condition">
+            <option value="equal">Equal</option>
+            <option value="less_than">Less than</option>
+            <option value="greater_than">Greater than</option>
+            <option value="not_equal">Not equal</option>
+          </select>
+          <input id="filter_difference" style="margin-left:10px;" class="form-control form-control-sm" type="text" placeholder="">
+        </div>
+        <div class="col-md-12">
+          <button style="margin:10px 5px;" id="apply_filter" class="btn btn-add btn-sm pull-right" data-bs-toggle="modal" role="button"><i class='bx bx-filter-alt'></i>Apply</button>
+          <button style="margin:10px 5px;"id="reset_filter" class="btn btn-reset btn-sm pull-right" data-bs-toggle="modal" role="button"><i class='bx bx-reset' ></i>Reset</button>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-2"></div>
+    <div class="col-md-5 text-right">
+      <?php if(!$data["is_closed"]): ?>
+        <button id="reconcile_add_replace_btn" class="btn btn-add btn-sm" data-bs-toggle="modal" href="#modal" role="button"><i class='bx bx-add-to-queue'></i> Add / Replace</button>
+        <button id="reconcile_close_period" class="btn btn-export btn-sm" style="margin-left: 5px;" data-bs-toggle="modal" role="button"><i class='bx bx-list-check'></i> Close Period</button>
+      <?php endif; ?>
+      <button id="reconcile_export_btn" class="btn btn-export btn-sm" style="margin-left: 5px;" data-bs-toggle="modal" role="button"><i class='bx bx-export'></i> Export</button>
+      
+    </div>
   </div>
-
+  
   <div class="table-responsive mt-3">
-    <table class="table table-bordered text-nowrap table-hover">
+    <table class="table table-bordered text-nowrap table-hover" id="report_reconcile_table">
       <!-- COLGROUP -->
       <colgroup>
         <col />
@@ -110,41 +159,6 @@ var month = "<?php echo $data["month"];?>";
           <!-- <th scope="col"></th> -->
         </tr>
         <tr>
-          <th scope="col"></th>
-          <th scope="col"></th>
-          <th scope="col"></th>
-          <th scope="col"></th>
-          <th scope="col"></th>
-          <th scope="col"></th>
-          <th scope="col"></th>
-          <th scope="col"></th>
-          <th scope="col"></th>
-          <th scope="col"></th>
-          <th scope="col"></th>
-          <th scope="col"></th>
-          <th scope="col"></th>
-          <th scope="col"></th>
-          <th class="text-center" style="background-color: #FCE5CD;" scope="col" colspan="4">Adjustment</th>
-          <!-- <th scope="col"></th>
-          <th scope="col"></th>
-          <th scope="col"></th> -->
-          <th scope="col"></th>
-          <!--  -->
-          <th scope="col"></th>
-          <!--  -->
-          <th scope="col"></th>
-          <th scope="col"></th>
-          <th scope="col"></th>
-          <th scope="col"></th>
-          <th scope="col"></th>
-          <th scope="col"></th>
-          <!--  -->
-          <th scope="col"></th>
-          <!--  -->
-          <th scope="col"></th>
-          <th scope="col"></th>
-        </tr>
-        <tr>
           <th scope="col">Parent Customer ID</th>
           <th scope="col">Customer ID</th>
           <th scope="col">Customer Name</th>
@@ -183,56 +197,42 @@ var month = "<?php echo $data["month"];?>";
     <div id="reconcile_content_loading">loading...</div>
   </div>
 
-  <div class="row mt-4">
-    <nav aria-label="Page navigation example">
-      <ul class="pagination justify-content-center">
-        <li class="page-item disabled">
-          <a class="page-link" href="#" tabindex="-1" aria-disabled="true">Previous</a>
-        </li>
-        <li class="page-item"><a class="page-link" href="#">1</a></li>
-        <li class="page-item"><a class="page-link" href="#">2</a></li>
-        <li class="page-item"><a class="page-link" href="#">3</a></li>
-        <li class="page-item"><a class="page-link" href="#">4</a></li>
-        <li class="page-item"><a class="page-link" href="#">5</a></li>
-        <li class="page-item">
-          <a class="page-link" href="#">Next</a>
-        </li>
-      </ul>
-    </nav>
-  </div>
-
   <!-- First modal dialog -->
-  <div class="modal fade" id="modal" aria-hidden="true" aria-labelledby="..." tabindex="-1">
+  <div class="modal" tabindex="-1" id="reconcile_add_replace_modal">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">Upload File to Repare Your Data</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          <h5 class="modal-title">Add or Replace New Data</h5>
         </div>
         <div class="modal-body">
-          <form action="">
+          <form enctype="multipart/form-data" class="pt-3" id="reconcile_add_replace_form">
             <!--  -->
             <div class="mb-4">
-              <label for="exampleFormControlInput1" class="form-label">Choose file type to upload</label>
-              <select class="form-select" aria-label="Default select example" id="file-re-upload-selector">
-                <option selected value="gl_revenue">GL Revenue (Receive)</option>
-                <option value="transfer">Transfer</option>
-                <option value="adjust_begining">Adjust ยอดยกมา</option>
-                <option value="adjust_accounting">Adjust Accounting</option>
-                <option value="adjust_frontend">Adjust Other System</option>
-                <option value="apis">APIs</option>
-              </select>
+              
+                <label for="file-re-upload-selector" class="form-label">Choose input type</label>
+                <select class="form-control" id="file-re-upload-selector" name="file-re-upload-selector">
+                  <option selected value="gl_revenue">GL Revenue (Receive)</option>
+                  <option value="google_spending">Google Spending</option>
+                  <option value="facebook_spending">FaceBook Spending</option>
+                  <option value="transfer">Transfer</option>
+                  <option value="adjust_begining">Adjust ยอดยกมา</option>
+                  <option value="adjust_accounting">Adjust Accounting</option>
+                  <option value="adjust_frontend">Adjust Other System</option>
+                  <option value="apis">APIs</option>
+                </select>
+              
             </div>
             <!--  -->
             <div class="mb-3" id="input-file-upload">
               <div class="upload-container">
                 <div class="border-container">
-                  <input type="file" id="customer-file-upload" class="form-control">
+                  <input type="file" id="reconcile_add_replace_file" name="reconcile_add_replace_file" class="form-control">
                 </div>
               </div>
             </div>
             <!--  -->
             <div class="border p-3" id="checkbox-api-group" style="display: none;">
+              <label>Select input type to update</label>
               <div class="form-check">
                 <input class="form-check-input" type="checkbox" value="" id="media-wallet-checkbox">
                 <label class="form-check-label" for="media-wallet-checkbox">
@@ -254,7 +254,7 @@ var month = "<?php echo $data["month"];?>";
               <div class="form-check">
                 <input class="form-check-input" type="checkbox" value="" id="ice-checkbox">
                 <label class="form-check-label" for="ice-checkbox">
-                  ICE
+                  Remaining ICE
                 </label>
               </div>
             </div>
@@ -263,7 +263,7 @@ var month = "<?php echo $data["month"];?>";
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          <button class="btn btn-primary" id="re-upload-file-button" data-bs-target="#modal2" data-bs-toggle="modal" data-bs-dismiss="modal">Upload</button>
+          <button type="submit" class="btn btn-primary" id="re-upload-file-button" data-bs-target="#modal2" data-bs-toggle="modal" data-bs-dismiss="modal">Upload</button>
           <button class="btn btn-primary" id="get-and-update-button" style="display: none;" data-bs-target="#modal2" data-bs-toggle="modal" data-bs-dismiss="modal">Get and Update Data</button>
         </div>
       </div>
@@ -303,11 +303,12 @@ var month = "<?php echo $data["month"];?>";
 
 </div>
 
-<div class="modal" tabindex="-1" id="myModal">
+<div class="modal" tabindex="-1" id="AdjustModal">
   <div class="modal-dialog">
     <div class="modal-content">
-      <div class="modal-header">
+      <div class="modal-header" style="display:block;">
         <h5 class="modal-title"></h5>
+        <small><b>customer name: </b></small><small id ="edit_able_customer_name"></small>
       </div>
       <div class="modal-body">
       <div class="form-group">
@@ -328,7 +329,41 @@ var month = "<?php echo $data["month"];?>";
     </div>
   </div>
 </div>
+<!-- Delete Customer Modal -->
+<div class="modal fade" id="modalClosePeriod" tabindex="-1" aria-labelledby="modalClosePeriodLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <!-- header  -->
+        <div class="modal-header">
+          <h5 class="modal-title">Close this period</h5>
+        </div>
+        <!-- body -->
+        <div class="modal-body">
+          <p>Are you sure to close this period ?</p>
+        </div>
+        <!-- footer -->
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">No</button>
+          <button type="button" class="btn btn-danger" id="confirmClosePeriodButton">
+            <span class="spinner-button spinner-border spinner-border-sm hide" role="status" aria-hidden="true"></span>
+            <span class="text-button ml-2">Yes</span>
+          </button>
+        </div>  
+        <!--  -->
+      </div>
+    </div>
+  </div>
+  <div class="loader-overlay">
+    <div class="spinner-border text-dark spinner-loader" role="status">
+      <span class="sr-only">Loading...</span>
+    </div>
+  </div>
+
 
 <?php require_once APPROOT . "/views/layout/script.php"; ?>
 
+<script src="<?php echo BASE_URL; ?>/public/vendors/datatables_bootstrap4/jquery.dataTables.min.js"></script>
+<script src="<?php echo BASE_URL; ?>/public/vendors/datatables_bootstrap4/dataTables.bootstrap4.min.js"></script>
+<script src="<?php echo BASE_URL; ?>/public/vendors/datatables_bootstrap4/dataTables.fixedColumns.min.js"></script>
+<script src="<?php echo BASE_URL; ?>/public/vendors/popper.min.js"></script>
 <script src="<?php echo BASE_URL; ?>/public/js/report/reconcile.js"></script>

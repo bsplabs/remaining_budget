@@ -203,7 +203,10 @@ class Customer
                 AND offset_acct_name = :offset_acct_name 
             ";
       $stmt = $mainDB->prepare($sql);
-      $stmt->bindParam("parent_id", $parent_id);
+      $stmt->bindParam("grandadmin_customer_id", $customer['grandadmin_customer_id']);
+      $stmt->bindParam("grandadmin_customer_name", $customer['grandadmin_customer_name']);
+      $stmt->bindParam("offset_acct", $customer['offset_acct']);
+      $stmt->bindParam("offset_acct_name", $customer['offset_acct_name']);
       $stmt->execute();
       $fetch_row_count = $stmt->fetch(PDO::FETCH_ASSOC);
       $row_count = $fetch_row_count["rowCount"];

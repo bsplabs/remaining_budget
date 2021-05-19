@@ -52,7 +52,8 @@ function colorLink() {
 linkColor.forEach((l) => l.addEventListener("click", colorLink));
 
 function currencyFormat(num) {
-  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  // return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  return num;
 }
 
 function stringNullToDash(text){

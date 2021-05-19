@@ -211,7 +211,7 @@ class CustomersController extends Controller
 
   }
 
-  public function exportCustomers()
+  public function exportCustomers($customers)
   {
     $objPHPExcel = new PHPExcel();
     // $objPHPExcel->setActiveSheetIndex(0);
@@ -245,8 +245,8 @@ class CustomersController extends Controller
 
     // set customer data
     $i = 2;
-    $get_all_customers = $this->customerModel->getAllCustomers();
-    foreach ($get_all_customers["data"] as $customer) {
+    // $get_all_customers = $this->customerModel->getAllCustomers();
+    foreach ($customers as $customer) {
       $sheet->setCellValueExplicit('A' . $i, $customer['id'], PHPExcel_Cell_DataType::TYPE_STRING);
       $sheet->setCellValueExplicit('B' . $i, $customer['parent_id'], PHPExcel_Cell_DataType::TYPE_STRING);
       $sheet->setCellValueExplicit('C' . $i, $customer['grandadmin_customer_id'], PHPExcel_Cell_DataType::TYPE_STRING);
@@ -274,24 +274,30 @@ class CustomersController extends Controller
   public function getCustomers()
   {
     header("Content-Type: application/json");
-    // print_r($_POST);
+
+    if ( $_SERVER['REQUEST_METHOD'] == 'POST' && empty($_POST) ) {
+      $_POST = json_decode(file_get_contents('php://input'), true);
+    }
+
+    // exit;
     // $query_string = $this->getQueryString();
     // echo 'qr ----------> ';
     // print_r($query_string);
+
     $offset = $_POST["start"];
     $limit = $_POST["length"];
     $columns = $_POST["columns"];
     $orders = isset($_POST["order"]) ? $_POST["order"] : NULL;
     $search = isset($_POST["search"]) ?$_POST["search"] : NULL;
-
-    // filtering
+    $filters = isset($_POST["filters"]) ?$_POST["filters"] : NULL;
+    $action_type = isset($_POST["action_type"]) ? $_POST["action_type"] : NULL;
 
     // searching
     $where = '';
     if (!empty($search) || $search['value'] == '') {
       $kw = $search['value'];
       if ($kw !== '') {
-        $where .= "WHERE ";
+        $where .= "WHERE (";
         $where .= "id LIKE '%{$kw}%' OR ";
         $where .= "grandadmin_customer_id LIKE '%{$kw}%' OR ";
         $where .= "grandadmin_customer_name LIKE '%{$kw}%' OR ";
@@ -302,7 +308,45 @@ class CustomersController extends Controller
         $where .= "payment_method LIKE '%{$kw}%' OR ";
         // $where .= "created_at LIKE '%{$kw}%' OR ";
         // $where .= "updated_at LIKE '%{$kw}%' OR ";
-        $where .= "updated_by LIKE '%{$kw}%'";
+        $where .= "updated_by LIKE '%{$kw}%')";
+      }
+    }
+
+    // filtering
+    if ($filters && count($filters) > 0) {
+      $filter_where = '';
+      foreach ($filters as $filter_key => $filter_value) {
+        if ($filter_key === 'filter_parent_id') {
+          if ($filter_value === 'more_than_one_child') {
+            $filter_where .= "parent_id IN (SELECT parent_id FROM remaining_budget_customers GROUP BY parent_id HAVING count(*) > 1) AND ";
+          } else if ($filter_value === 'one_child') {
+            $filter_where .= "parent_id IN (SELECT parent_id FROM remaining_budget_customers GROUP BY parent_id HAVING count(*) = 1) AND ";
+          } else {
+            $filter_where .= "";
+          }
+        }
+
+        if ($filter_key === 'filter_payment') {
+          if ($filter_value === 'postpaid') {
+            $filter_where .= "payment_method = 'postpaid' AND ";
+          } else if ($filter_value === 'prepaid') {
+            $filter_where .= "payment_method = 'prepaid' AND ";
+          } else {
+            $filter_where .= "";
+          }
+        }
+      }
+
+
+      if ($filter_where !== '') {
+        $filter_where = rtrim($filter_where, " AND ");
+        $filter_where = "(" . $filter_where . ")";
+        if ($where === '') {
+          $where .= "WHERE ";
+        } else {
+          $where .= " AND ";
+        }
+        $where .= $filter_where;
       }
     }
 
@@ -323,13 +367,17 @@ class CustomersController extends Controller
     $get_total_all_customers = $this->customerModel->getTotalAllCustomers();
     $get_customers = $this->customerModel->getCustomers($offset, $limit, $order_by, $where);
 
-    $response = array (
-      "draw" => $_POST["draw"],
-      "recordsTotal" => $get_total_all_customers["data"],
-      "recordsFiltered" => $get_customers["data"]["total_customers"],
-      "data" => $get_customers["data"]["customers"]
-    );
-    echo json_encode($response);
+    if ($action_type === 'get_data') {
+      $response = array (
+        "draw" => $_POST["draw"],
+        "recordsTotal" => $get_total_all_customers["data"],
+        "recordsFiltered" => $get_customers["data"]["total_customers"],
+        "data" => $get_customers["data"]["customers"]
+      );
+      echo json_encode($response);
+    } else if ($action_type === 'export') {
+      $this->exportCustomers($get_customers["data"]["customers"]);
+    }
   }
 
   private function mappingColumn($col_name, $dir)

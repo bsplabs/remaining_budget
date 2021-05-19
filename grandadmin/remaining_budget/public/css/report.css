@@ -114,3 +114,19 @@
 .edit-able{
   cursor: pointer;
 }
+
+.more-note-icon{
+  position: absolute;
+  top: -5px;
+  right: 0px;
+  transform: rotate(-45deg);
+  width: 0;
+  height: 0;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  border-left: 8px solid green;
+}
+
+.more-note-td{
+  position: relative;
+}

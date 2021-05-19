@@ -248,6 +248,16 @@ CREATE TABLE `remaining_budget`.`remaining_budget_withholding_tax` (
   PRIMARY KEY (`id`)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE `remaining_budget`.`remaining_budget_close_period` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `month` VARCHAR(10) NOT NULL,
+  `year` VARCHAR(10) NOT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_by` VARCHAR(100) NULL,
+  PRIMARY KEY (`id`)
+  )ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
 
 
 

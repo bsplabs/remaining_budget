@@ -27,6 +27,9 @@
         </a>
       </div>
       
+      <div id="version-number">
+        V. 1.0.0
+      </div>
     </div>
   </nav>
 </div>

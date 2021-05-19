@@ -191,7 +191,7 @@ class Resource
   {
     try {
       $mainDB = $this->db->dbCon();
-      $sql = "SELECT CustomerID FROM ready_topup WHERE ad_id = :ad_id";
+      $sql = "SELECT CustomerID FROM ready_topup WHERE ad_id = :ad_id ORDER BY ID DESC LIMIT 1";
       $stmt = $mainDB->prepare($sql);
       if ($ad_type === "facebook") {
         $stmt->bindParam("ad_id", $spending_data["facebook_id"]);
@@ -213,7 +213,7 @@ class Resource
   public function findCustomerName($ads_type, $ads_id)
   {
     try {
-      $mainDB = $this->db->dbCon();
+      $mainDB = $this->db->dbCon("latin1");
       $sql = "SELECT bill_firstname, bill_lastname, bill_company FROM tracking_webpro_new_members WHERE {$ads_type} = '{$ads_id}'";
       $stmt = $mainDB->prepare($sql);
       $stmt->execute();
@@ -228,40 +228,62 @@ class Resource
     return $result;
   }
 
-  public function findRemainingBudgetCustomerID()
+  public function findRemainingBudgetCustomerID($grandadmin_customer_id, $grandadmin_customer_name)
   {
-    return "";
+    try {
+      $mainDB = $this->db->dbCon("latin1");
+      $sql = "SELECT id FROM remaining_budget_customers WHERE grandadmin_customer_id = :grandadmin_customer_id and grandadmin_customer_name = :grandadmin_customer_name order by is_parent limit 1;";
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("grandadmin_customer_id", $grandadmin_customer_id);
+      $stmt->bindParam("grandadmin_customer_name", $grandadmin_customer_name);
+      $stmt->execute();
+      $result["status"] = "success";
+      $data = $stmt->fetch(PDO::FETCH_ASSOC);
+      $result["data"] = $data["id"];
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+
+    $this->db->dbClose($mainDB);
+    return $result;
   }
 
   public function addNewGrandAdminCustomer($customer_id, $customer_name) 
   {
     try {
       $mainDB = $this->db->dbCon();
-
       $sql = "INSERT INTO remaining_budget_customers (
                 grandadmin_customer_id,
                 grandadmin_customer_name,
                 offset_acct,
-                offset_acct_name
+                offset_acct_name,
+                company,
+                parent_id,
+                payment_method,
+                updated_by
               )
               VALUES (
-                :grandadmin_customer_id,
-                :grandadmin_customer_name,
-                :offset_acct,
-                :offset_acct_name
+                :gci,
+                :gcn,
+                :gci,
+                :gcn,
+                :company,
+                :parent_id,
+                :payment_method,
+                :updated_by
               )";
 
       $stmt = $mainDB->prepare($sql);
-      $stmt->bindParam("grandadmin_customer_id", $customer_id);
-      $stmt->bindParam("grandadmin_customer_name", $customer_name);
-      $stmt->bindParam("offset_acct", $customer_id);
-      $stmt->bindParam("offset_acct_name", $customer_name);
-
+      $stmt->bindParam("gci", $customer_id);
+      $stmt->bindParam("gcn", $customer_name);
+      $stmt->bindValue("company","RPTH");
+      $stmt->bindParam("parent_id", $customer_id);
+      $stmt->bindValue("payment_method", "prepaid");
+      $stmt->bindValue("updated_by", "script");
       $stmt->execute();
-
       $result["status"] = "success";
       $result["data"] = $mainDB->lastInsertId();
-    
     } catch (PDOException $e) {
       $result["status"] = "fail";
       $result["data"] = $e->getMessage();
@@ -416,5 +438,214 @@ class Resource
     $this->db->dbClose($mainDB);
     return $result;
   }
+
+
+  public function clearGoogleSpendingByID($month, $year, $remaining_budget_customer_id)
+  {
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "DELETE FROM remaining_budget_google_spending WHERE month = :month AND year = :year AND remaining_budget_customer_id = :remaining_budget_customer_id";
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("month", $month);
+      $stmt->bindParam("year", $year);
+      $stmt->bindParam("remaining_budget_customer_id", $remaining_budget_customer_id);
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = "";
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+  
+  public function clearFacebookSpendingByID($month, $year, $remaining_budget_customer_id)
+  {
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "DELETE FROM remaining_budget_facebook_spending WHERE month = :month AND year = :year AND remaining_budget_customer_id = :remaining_budget_customer_id";
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("month", $month);
+      $stmt->bindParam("year", $year);
+      $stmt->bindParam("remaining_budget_customer_id", $remaining_budget_customer_id);
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = "";
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+  public function insertWalletTransfer($month, $year, $wallet_transfer){
+    try{
+      $mainDB = $this->db->dbCon();
+      $sql = "INSERT INTO remaining_budget_wallet_transfer (
+        source_remaining_budget_customer_id,
+        destination_remaining_budget_customer_id,
+        source_grandadmin_customer_id,
+        source_grandadmin_customer_name,
+        destination_grandadmin_customer_id,
+        destination_grandadmin_customer_name,
+        month,
+        year,
+        source_value,
+        note,
+        clearing,
+        is_reconcile,
+        created_at,
+        updated_at,
+        updated_by
+      )
+      VALUES (
+        :source_remaining_budget_customer_id,
+        :destination_remaining_budget_customer_id,
+        :source_grandadmin_customer_id,
+        :source_grandadmin_customer_name,
+        :destination_grandadmin_customer_id,
+        :destination_grandadmin_customer_name,
+        :month,
+        :year,
+        :source_value,
+        :note,
+        :clearing,
+        0,
+        now(),
+        now(),
+        :updated_by
+      )";
+      
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("source_remaining_budget_customer_id", $wallet_transfer["source_remaining_budget_customer_id"]);
+      $stmt->bindParam("destination_remaining_budget_customer_id", $wallet_transfer["destination_remaining_budget_customer_id"]);
+      $stmt->bindParam("source_grandadmin_customer_id", $wallet_transfer["source_grandadmin_customer_id"]);
+      $stmt->bindParam("source_grandadmin_customer_name", $wallet_transfer["source_grandadmin_customer_name"]);
+      $stmt->bindParam("destination_grandadmin_customer_id", $wallet_transfer["destination_grandadmin_customer_id"]);
+      $stmt->bindParam("destination_grandadmin_customer_name", $wallet_transfer["destination_grandadmin_customer_name"]);
+      $stmt->bindParam("month", $month);
+      $stmt->bindParam("year", $year);
+      $stmt->bindParam("source_value", $this->floatvalue($wallet_transfer["source_value"]));
+      $stmt->bindParam("note", $wallet_transfer["note"]);
+      $stmt->bindParam("clearing", $wallet_transfer["clearing"]);
+      $stmt->bindValue("updated_by", 'kittisak');
+
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = "";
+      
+    }catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+
+  }
+
+  public function isRemainingBudgetByGrandAdminData($id,$name){
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "SELECT id FROM remaining_budget_customers WHERE grandadmin_customer_id = :id and grandadmin_customer_name = :name limit 1;";
+      $stmt = $mainDB->prepare($sql);
+      
+      $stmt->bindParam("id", $id);
+      $stmt->bindParam("name", $name);
+     
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+
+    $this->db->dbClose($mainDB);
+    return $result;
+
+  }
+
+  
+  public function isRemainingBudgetByOffsetData($id,$name){
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "SELECT id FROM remaining_budget_customers WHERE offset_acct = :id and offset_acct_name = :name limit 1;";
+      $stmt = $mainDB->prepare($sql);
+      
+      $stmt->bindParam("id", $id);
+      $stmt->bindParam("name", $name);
+     
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+
+    $this->db->dbClose($mainDB);
+    return $result;
+
+
+  }
+
+  public function createRemainingBudgetCustomerId($id,$name,$source){
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "INSERT INTO remaining_budget_customers (
+                grandadmin_customer_id,
+                grandadmin_customer_name,
+                offset_acct,
+                offset_acct_name,
+                company,
+                parent_id,
+                payment_method,
+                is_parent,
+                created_at,
+                updated_at,
+                updated_by
+              )
+              VALUES (
+                :grandadmin_customer_id,
+                :grandadmin_customer_name,
+                :offset_acct,
+                :offset_acct_name,
+                :company,
+                :parent_id,
+                :payment_method,
+                1,
+                now(),
+                now(),
+                :updated_by
+              )";
+
+      $stmt = $mainDB->prepare($sql);
+
+      $stmt->bindParam("grandadmin_customer_id", $id);
+      $stmt->bindParam("grandadmin_customer_name", $name);
+      $stmt->bindParam("offset_acct", $id);
+      $stmt->bindParam("offset_acct_name", $name);
+      $stmt->bindValue("company", "RPTH");
+      $stmt->bindParam("parent_id", $id);
+      $stmt->bindValue("payment_method", 'PrePaid');
+      $stmt->bindParam("updated_by", $source);
+
+      $stmt->execute();
+      $result = $mainDB->lastInsertId();
+    } catch (PDOException $e) {
+      $result = "";
+    }
+
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+  function floatvalue($val){
+    $val = str_replace(",",".",$val);
+    $val = preg_replace('/\.(?=.*\.)/', '', $val);
+    return floatval($val);
+}
+  
 
 }

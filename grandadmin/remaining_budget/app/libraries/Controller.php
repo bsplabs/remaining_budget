@@ -41,4 +41,21 @@ class Controller
     parse_str($query_string_not_parse, $query_string);
     return $query_string;
   }
+
+  public function getRemainingBudgetCustomerId($type,$id,$name,$source){
+    $resource_model = $this->model("Resource"); 
+    //type 'grandadmin', 'offset'
+    if($type == 'grandadmin'){
+      $remaining_budget_customer_id = $resource_model->isRemainingBudgetByGrandAdminData($id,$name);
+    }else{
+      $remaining_budget_customer_id = $resource_model->isRemainingBudgetByOffsetData($id,$name);
+    }
+
+    if($check_remaining_budget_customer_id == NULL){
+      $remaining_budget_customer_id = $resource_model->createRemainingBudgetCustomerId($id,$name,$source);
+    }
+
+    return $remaining_budget_customer_id;
+    
+  }
 }

@@ -348,31 +348,37 @@ class Report
   {
     try {
       $mainDB = $this->db->dbCon();
-
       $sql = "INSERT INTO remaining_budget_customers (
                 grandadmin_customer_id,
                 grandadmin_customer_name,
                 offset_acct,
-                offset_acct_name
+                offset_acct_name,
+                company,
+                parent_id,
+                payment_method,
+                updated_by
               )
               VALUES (
-                :grandadmin_customer_id,
-                :grandadmin_customer_name,
-                :offset_acct,
-                :offset_acct_name
+                :gci,
+                :gcn,
+                :gci,
+                :gcn,
+                :company,
+                :parent_id,
+                :payment_method,
+                :updated_by
               )";
 
       $stmt = $mainDB->prepare($sql);
-      $stmt->bindParam("grandadmin_customer_id", $offsetAcct);
-      $stmt->bindParam("grandadmin_customer_name", $offsetAcctName);
-      $stmt->bindParam("offset_acct", $offsetAcct);
-      $stmt->bindParam("offset_acct_name", $offsetAcctName);
-
+      $stmt->bindParam("gci", $offsetAcct);
+      $stmt->bindParam("gcn", $offsetAcctName);
+      $stmt->bindValue("company","RPTH");
+      $stmt->bindParam("parent_id", $offsetAcct);
+      $stmt->bindValue("payment_method", "prepaid");
+      $stmt->bindValue("updated_by", "script");
       $stmt->execute();
-
       $result["status"] = "success";
       $result["data"] = $mainDB->lastInsertId();
-    
     } catch (PDOException $e) {
       $result["status"] = "fail";
       $result["data"] = $e->getMessage();
@@ -480,6 +486,60 @@ class Report
     return $result;
   }
 
+  public function getNotCompleteReportUpdateStatus($month, $year)
+  {
+    try {
+      $mainDB = $this->db->dbCon();
+
+      $sql = "SELECT count(*) as total FROM remaining_budget_report_status WHERE type = 'update' AND month = :month AND year = :year AND overall_status != 'completed' limit 1;";
+
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("month", $month);
+      $stmt->bindParam("year", $year);
+      $stmt->execute();
+
+      $result["status"] = "success";
+      $data = $stmt->fetch(PDO::FETCH_ASSOC);
+      if($data["total"] > 0){
+        $result["data"] = true;
+      }else{
+        $result["data"] = false;
+      }
+
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = false;
+    }
+
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+  public function checkThisMonthJob($month,$year){
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "SELECT count(*) as total
+              FROM remaining_budget_report_status
+              WHERE month = :month and year = :year;";
+
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("month", $month);
+      $stmt->bindParam("year", $year);
+      $stmt->execute();
+      $data = $stmt->fetch(PDO::FETCH_ASSOC);
+      if($data["total"] > 0){
+        $result = true;
+      }else{
+        $result = false;
+      }
+    } catch (PDOException $e) {
+      $result = true;
+    }
+
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
   public function getMonthYearLists()
   {
     try {
@@ -537,18 +597,37 @@ class Report
     return $result;
   }
 
+  public function updateReportStatusById($id, $resource_type, $status)
+  {
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "UPDATE remaining_budget_report_status SET {$resource_type} = '{$status}' WHERE id = :id";
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("id", $id);
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = "";
+
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
   public function getReconcileData($year, $month)
   {
     try {
       $mainDB = $this->db->dbCon();
       $sql = "SELECT c.company,c.payment_method,c.parent_id,c.grandadmin_customer_id,c.grandadmin_customer_name,
       c.offset_acct,c.offset_acct_name,r.id as report_id,
-      sum(r.last_month_remaining) as last_month_remaining, sum(r.adjustment_remain) as adjustment_remain, sum(r.receive) as `receive`, sum(r.invoice) as invoice, sum(r.transfer) as `transfer`,
-      sum(r.ads_credit_note) as ads_credit_note, sum(r.spending_invoice) as spending_invoice, sum(r.adjustment_free_click_cost) as adjustment_free_click_cost, sum(r.adjustment_free_click_cost_old) as adjustment_free_click_cost_old,
-      sum(r.adjustment_cash_advance) as adjustment_cash_advance,sum(r.adjustment_max) as adjustment_max,sum(r.cash_advance) as cash_advance, sum(r.remaining_ice) as remaining_ice,
-      sum(r.wallet) as wallet, sum(r.wallet_free_click_cost) as wallet_free_click_cost, sum(r.withholding_tax) as withholding_tax, sum(r.adjustment_front_end) as adjustment_front_end,
+      sum(r.last_month_remaining) as last_month_remaining, sum(r.adjustment_remain) as adjustment_remain, r.adjustment_remain_note, sum(r.receive) as `receive`, sum(r.invoice) as invoice, sum(r.transfer) as `transfer`,
+      sum(r.ads_credit_note) as ads_credit_note, sum(r.spending_invoice) as spending_invoice, sum(r.adjustment_free_click_cost) as adjustment_free_click_cost, r.adjustment_free_click_cost_note, sum(r.adjustment_free_click_cost_old) as adjustment_free_click_cost_old,r.adjustment_free_click_cost_old_note,
+      sum(r.adjustment_cash_advance) as adjustment_cash_advance,r.adjustment_cash_advance,sum(r.adjustment_max) as adjustment_max,r.adjustment_max,sum(r.cash_advance) as cash_advance, sum(r.remaining_ice) as remaining_ice,
+      sum(r.wallet) as wallet, sum(r.wallet_free_click_cost) as wallet_free_click_cost, sum(r.withholding_tax) as withholding_tax, sum(r.adjustment_front_end) as adjustment_front_end,r.adjustment_front_end_note,
       sum(r.remaining_budget) as remaining_budget, sum(r.difference) as difference,r.note as note,
-      count(c.parent_id) as amount FROM remaining_budget_report r LEFT JOIN remaining_budget_customers c ON c.id = r.remaining_budget_customer_id WHERE r.year = :year and r.month = :month GROUP BY c.parent_id ORDER BY c.parent_id ASC LIMIT 100;";
+      count(c.parent_id) as amount FROM remaining_budget_report r LEFT JOIN remaining_budget_customers c ON c.id = r.remaining_budget_customer_id WHERE r.year = :year and r.month = :month and c.parent_id is not null GROUP BY c.parent_id ORDER BY c.parent_id ASC limit 100;";
       $stmt = $mainDB->prepare($sql);
       $stmt->bindParam("year", $year);
       $stmt->bindParam("month", $month);
@@ -603,16 +682,24 @@ class Report
   
   public function updateReportData($report_id,$value,$note,$type)
   {
+    $types = array("remaining_remain","adjustment_free_click_cost","adjustment_free_click_cost_old","adjustment_cash_advance", "adjustment_max", "adjustment_front_end");
+    $type_note = $type."_note";
     try {
-      $mainDB = $this->db->dbCon();
-      $sql = "UPDATE remaining_budget_report SET adjustment_remain = :value, adjustment_remain_note = :note where id = :report_id;";
-      $stmt = $mainDB->prepare($sql);
-      $stmt->bindParam("value", $value);
-      $stmt->bindParam("note", $note);
-      $stmt->bindParam("report_id", $report_id);
-      $stmt->execute();
-      $result["status"] = "success";
-      $result["data"] = "";
+      if(in_array($type,$types)){
+        $mainDB = $this->db->dbCon();
+        $sql = "UPDATE remaining_budget_report SET {$type} = :value, {$type_note} = :note where id = :report_id;";
+        $stmt = $mainDB->prepare($sql);
+        $stmt->bindParam("value", $value);
+        $stmt->bindParam("note", $note);
+        $stmt->bindParam("report_id", $report_id);
+        $stmt->execute();
+        $result["status"] = "success";
+        $result["data"] = "";
+      }else{
+        $result["status"] = "fail";
+        $result["data"] = "wrong type";
+      }
+      
 
     } catch (PDOException $e) {
       $result["status"] = "fail";
@@ -633,6 +720,192 @@ class Report
       $stmt->bindParam("difference", $difference);
       $stmt->bindParam("report_id", $report_id);
       $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = "";
+
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+  public function getReportByQuery($filter_cash_advance,$filter_remaining_budget,$filter_difference,$search,$condition)
+  {
+    $result["header"] = array(
+      "Remaining Budget ID", "Parent ID", "Customer ID", "Custormer Name", "Customer Acct", "Customer Acct Name",
+    "Company", "Payment Method", "Remaining ทางบัญชี", "Adjust ยอดยกมา", "หมายเหตุ adjust ยอดยกมา" ,"Receive", "Invoice", "Transfer (โอนเงินระหว่างบัญชี)",
+    "คืนเงินค่าโฆษณา",
+    "Spending (-)",
+    "JE + Free Clickcost",
+    "หมายเหตุ JE + Free Clickcost",
+    "Free Clickcost (ค่าใช้จ่ายต้องห้าม)",
+    "หมายเหตุ Free Clickcost (ค่าใช้จ่ายต้องห้าม)",
+    "Adjustment",
+    "หมายเหตุ Adjustment",
+    "Max",
+    "หมายเหตุ Max",
+    "Cash Advance",
+    "Remaining ICE",
+          "Wallet",
+          "Wallet - Free Clickcost (-)",
+          "Withholding Tax",
+          "Adjust",
+          "หมายเหตุ Adjust",
+          "Remaining Budget",
+          "Difference",
+          "Note"
+    );
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "SELECT r.id,c.parent_id,c.grandadmin_customer_id,c.grandadmin_customer_name,c.offset_acct,c.offset_acct_name,c.company,c.payment_method,
+      r.last_month_remaining,r.adjustment_remain,r.adjustment_remain_note,r.receive,r.invoice,r.transfer,r.ads_credit_note,
+      r.spending_invoice as spending,r.adjustment_free_click_cost,r.adjustment_free_click_cost_note,r.adjustment_free_click_cost_old,r.adjustment_free_click_cost_old_note,
+      r.adjustment_cash_advance,r.adjustment_cash_advance_note,r.adjustment_max,r.adjustment_max_note,r.cash_advance,
+      r.remaining_ice,r.wallet,r.wallet_free_click_cost,r.withholding_tax,r.adjustment_front_end,r.adjustment_front_end_note,r.remaining_budget,
+      r.difference,r.note FROM remaining_budget_report r LEFT JOIN remaining_budget_customers c ON r.remaining_budget_customer_id = c.id";
+      if($condition != ""){
+        $sql .= " WHERE ".$condition;
+      }
+      $sql .= " Limit 5";
+
+      $stmt = $mainDB->prepare($sql);
+      if($condition != ""){
+        if($filter_cash_advance != ""){
+          $stmt->bindParam("cash_advance", $filter_cash_advance);
+        }
+        if($filter_remaining_budget != ""){
+          $stmt->bindParam("remaining_budget", $filter_remaining_budget);
+        }
+        if($filter_difference != ""){
+          $stmt->bindParam("difference", $filter_difference);
+        }
+        if($search != ""){
+          $stmt->bindParam("search", $search);
+        }
+        
+      }
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+
+  public function createUpdateWorker($input_type,$month,$year,$updated_by){
+    try {
+      $types = array("cash_advance","media_wallet","withholding_tax", "free_click_cost", "google_spending",
+      "facebook_spending","remaining_ice", "gl_cash_advance","transfer");
+      $mainDB = $this->db->dbCon();
+
+      $sql = "INSERT INTO remaining_budget_report_status (
+                `month`,
+                `year`,
+                cash_advance,
+                media_wallet,
+                withholding_tax,
+                free_click_cost,
+                google_spending,
+                facebook_spending,
+                remaining_ice,
+                gl_cash_advance,
+                `transfer`,
+                `type`,
+                overall_status,
+                created_at,
+                updated_at,
+                updated_by
+
+              )
+              VALUES (
+                :month,
+                :year,
+                :cash_advance,
+                :media_wallet,
+                :withholding_tax,
+                :free_click_cost,
+                :google_spending,
+                :facebook_spending,
+                :remaining_ice,
+                :gl_cash_advance,
+                :transfer,
+                :type,
+                :overall_status,
+                now(),
+                now(),
+                :updated_by
+              )";
+
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("month", $month);
+      $stmt->bindParam("year", $year);
+      foreach ($types as $type){
+        if($input_type == $type){
+          $stmt->bindValue($type, 'pending');
+        }else{
+          $stmt->bindValue($type, 'no');
+        }
+      }
+      
+      $stmt->bindValue("type", 'update');
+      $stmt->bindValue("overall_status", 'pending');
+      $stmt->bindValue("updated_by", $updated_by);
+
+      $stmt->execute();
+
+      $result["status"] = "success";
+      $result["data"] = $mainDB->lastInsertId();
+    
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+  function checkClosed($month, $year)
+  {
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "SELECT count(*) as total FROM remaining_budget_close_period where month = :month and year = :year";
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("month", $month);
+      $stmt->bindParam("year", $year);
+      $stmt->execute();
+      $result_data = $stmt->fetch(PDO::FETCH_ASSOC);
+      $result["status"] = "success";
+      if($result_data["total"] > 0){
+        $result["data"] = true;
+      }else{
+        $result["data"] = false;
+      }
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+  function closePeriod($month, $year, $created_by)
+  {
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "INSERT INTO remaining_budget_close_period (month, year, created_by) VALUES (:month, :year, :created_by)";
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("month", $month);
+      $stmt->bindParam("year", $year);
+      $stmt->bindParam("created_by", $created_by);
+      $stmt->execute();
+
       $result["status"] = "success";
       $result["data"] = "";
 

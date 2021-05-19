@@ -17,8 +17,7 @@ class GlCashAdvance
     if($gl_cash_advance_job['gl_cash_advance'] == 'waiting'){
       $gl_cash_advance_raw_data = $this->getRawData($gl_cash_advance_job['month'],$gl_cash_advance_job['year']);
       foreach($gl_cash_advance_raw_data["data"] as $gl_cash_advance){
-        $gl_type = $gl_cash_advance["series"];
-        $gl_type = substr($gl_type, 0, 2);
+        $gl_type = $gl_cash_advance["series_code"];
         $total = $gl_cash_advance["credit_lc"] - $gl_cash_advance["debit_lc"];
         $remaining_budget_id = $gl_cash_advance["remaining_budget_customer_id"];
         $month = $gl_cash_advance["month"];

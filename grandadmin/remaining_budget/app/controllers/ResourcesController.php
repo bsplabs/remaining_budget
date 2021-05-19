@@ -194,6 +194,161 @@ class ResourcesController extends Controller
 
   }
 
+  public function updateGoogleSpending()
+  {
+    header("Content-Type: application/json");
+    if ($_SERVER["REQUEST_METHOD"] === "POST") {
+      $allowedFileType = array(
+        'application/vnd.ms-excel',
+        'text/xls',
+        'text/xlsx',
+        'text/csv',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
+
+      if (!in_array($_FILES["googleSpendingInputFile"]["type"], $allowedFileType)) {
+        $res = array(
+          "status" => "fail",
+          "type" => "alert",
+          "error" => "File type not allowed"
+        );
+        echo json_encode($res);
+        exit;
+      }
+
+      if (empty($_POST["month"]) || empty($_POST["year"])) {
+        $res = array(
+          "status" => "error",
+          "type" => "alert",
+          "message" => "Month and year are required"
+        );
+        echo json_encode($res);
+        exit;
+      }
+      $month = $_POST["month"];
+      $year = $_POST["year"];
+      $updated_by = $_POST["updated_by"];
+
+      $targetFilePath = $_FILES["googleSpendingInputFile"]["tmp_name"];
+      $googleSpending = array();
+      $remaining_budget_customer_id_clear_list = array();
+      $dataIndex = 0;
+
+      // Open the file for reading
+      if (($handle = fopen("{$targetFilePath}", "r")) !== FALSE) {
+        $rowStartNumber = NULL;  
+        for ($i = 0; $row = fgetcsv($handle); ++$i) {
+          if ($row[0] === "รหัสบัญชี" && $row[1] === "บัญชี") {
+            $rowStartNumber = $i;
+            continue;
+          }
+          if ($rowStartNumber != NULL && $i > $rowStartNumber) {
+            $googleSpending[$dataIndex]["google_id"] = $row[0];
+            $googleSpending[$dataIndex]["google_account"] = $row[1];
+            $googleSpending[$dataIndex]["budget_account"] = $row[2];
+            $googleSpending[$dataIndex]["purchase_order"] = $row[3];
+            $googleSpending[$dataIndex]["campaign"] = $row[4];
+            $googleSpending[$dataIndex]["volume"] = $row[5];
+            $googleSpending[$dataIndex]["unit"] = $row[6];
+            $googleSpending[$dataIndex]["spending_total_price"] = $row[7];
+            $dataIndex++;
+          }
+          
+        }
+        fclose($handle);
+      }
+
+      $worker_id = $this->reportModel->createUpdateWorker("google_spending",$month, $year, $updated_by);
+      $worker_id = $worker_id["data"];
+
+      // check remaining_budget_customer_id
+      foreach ($googleSpending as $idx => $value) 
+      {
+        // Find grandadmin_customer_id
+        $find_customer_id = $this->resourceModel->findCustomerID($value, "google");
+        if ($find_customer_id["status"] === "success") {
+          $value["grandadmin_customer_id"] = $find_customer_id["data"]["CustomerID"];
+        } else {
+          $value["grandadmin_customer_id"] = "";
+        }
+
+        // Find grandadmin_customer_name
+        $find_customer_name = $this->resourceModel->findCustomerName("AdwordsCusId", $value["google_id"]);
+        
+        if ($find_customer_name["status"] === "success" && !empty($find_customer_name["data"])) {
+          if (empty($find_customer_name["data"]["bill_company"])) {
+            $customer_name = iconv('TIS-620','UTF-8',$find_customer_name["data"]["bill_firstname"]) . " " . iconv('TIS-620','UTF-8', $find_customer_name["data"]["bill_lastname"]);
+          } else {
+            $customer_name = iconv('TIS-620','UTF-8',$find_customer_name["data"]["bill_company"]);
+          }
+          $value["grandadmin_customer_name"] = $customer_name;
+        } else {
+          $value["grandadmin_customer_name"] = "";
+        }
+
+        // Find remaining_budget_customer_id
+        if ($value["grandadmin_customer_name"] !== "" && $value["grandadmin_customer_id"] !== "") {
+          $find_remaining_budget_customer_id = $this->resourceModel->findRemainingBudgetCustomerID($value["grandadmin_customer_id"], $value["grandadmin_customer_name"]);
+          if ($find_remaining_budget_customer_id["status"] === "success") {
+            $value["remaining_budget_customer_id"] = $find_remaining_budget_customer_id["data"];
+          } else {
+            // add new grandadmin_customer
+            $addnew_gac = $this->resourceModel->addNewGrandAdminCustomer($value["grandadmin_customer_id"], $value["grandadmin_customer_name"]);
+            if ($addnew_gac["status"] === "success" && !empty($addnew_gac["data"])) {
+              $value["remaining_budget_customer_id"] = $addnew_gac["data"];
+            } else {
+              $value["remaining_budget_customer_id"] = NULL;
+            }
+          } 
+        } else {
+          $value["remaining_budget_customer_id"] = NULL;
+        }
+        $googleSpending[$idx]["remaining_budget_customer_id"] = $value["remaining_budget_customer_id"];
+        $googleSpending[$idx]["grandadmin_customer_id"] = $value["grandadmin_customer_id"];
+        $googleSpending[$idx]["grandadmin_customer_name"] = $value["grandadmin_customer_name"];
+        if(!in_array($value["remaining_budget_customer_id"],$remaining_budget_customer_id_clear_list)){
+          $remaining_budget_customer_id_clear_list[] = $value["remaining_budget_customer_id"];
+        }
+        
+      }
+
+      //check and clear before replace
+      foreach ($remaining_budget_customer_id_clear_list as $idx => $value) 
+      {
+        if($value != NULL){
+          $this->resourceModel->clearGoogleSpendingByID($month, $year,$value["remaining_budget_customer_id"]);
+        }
+      }
+
+      //add new data
+      foreach ($googleSpending as $idx => $value) 
+      {
+        $insert_google_spending = $this->resourceModel->addGoogleSpendingData($month, $year, $value);
+      }
+
+
+      // update google spending status on report status table
+      $update_status = $this->reportModel->updateReportStatusById($worker_id, "google_spending", "waiting");
+      $update_status = $this->reportModel->updateReportStatusById($worker_id, "overall_status", "waiting");
+      
+      $response = array(
+        "status" => "success"
+      );
+      echo json_encode($response);
+      exit;
+
+    } else {
+      $response = array(
+        "status" => "error",
+        "type" => "alert",
+        "message" => "Allow only POST method"
+      );
+      echo json_encode($response);
+      exit;
+    }
+
+  }
+
   public function importFacebookSpending()
   {
     header("Content-Type: application/json");
@@ -414,6 +569,300 @@ class ResourcesController extends Controller
       );
       echo json_encode($res);
       exit;
+    }
+  }
+
+  public function updateFacebookSpending()
+  {
+    header("Content-Type: application/json");
+    if ($_SERVER["REQUEST_METHOD"] === "POST") {
+      $allowedFileType = array(
+        'application/vnd.ms-excel',
+        'text/xls',
+        'text/xlsx',
+        'text/csv',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
+      
+      if (!in_array($_FILES["facebookSpendingInputFile"]["type"], $allowedFileType)) {
+        $res = array(
+          "status" => "error",
+          "type" => "alert",
+          "message" => "File type not allowed"
+        );
+        echo json_encode($res);
+        exit;
+      }
+
+      if (empty($_POST["month"]) || empty($_POST["month"])) {
+        $res = array(
+          "status" => "error",
+          "type" => "alert",
+          "message" => "Month and year are required"
+        );
+        echo json_encode($res);
+        exit;
+      }
+      $month = $_POST["month"];
+      $year = $_POST["year"];
+      $updated_by = $_POST["updated_by"];
+
+      $file_path = $_FILES["facebookSpendingInputFile"]["tmp_name"];
+      $total = 0;
+      $valid_total = 0;
+      $invalid_total = 0;
+      $invalid_lists = array();
+      
+      $fb_spending_lists = array();
+      $remaining_budget_customer_id_clear_list = array();
+      $data_index = 0;
+      
+      if (($handle = fopen($file_path, "r")) !== FALSE) {
+        while (!feof($handle)) {
+          $row = fgetcsv($handle);
+          if ($row[0] == "Facebook Ireland Limited" && $row[3] == "ReadyPlanet Co., Ltd") {
+            $total++;
+            $fb_spending = array(
+              "month" => $month,
+              "year" => $year,
+              "billing_period" => $row[4],
+              "currency" => $row[10],
+              "payment_status" => $row[13],
+              "facebook_id" => trim($row[16], "_"),
+              "spending_total_price" => $this->getPrice($row[26]),
+              "campaign_id" => trim($row[18], "_")
+            );
+
+            $billing_period = $fb_spending["billing_period"];
+            $bp_exp = explode("-", $billing_period);
+            $input_date = strtotime($bp_exp[1] . "/" . $bp_exp[2] . "/" . $bp_exp[0]);
+            
+            $input_month = date("m", $input_date);
+            $input_year = date("Y", $input_date);
+
+            // Check month and year
+            if ($input_month != $month || $input_year != $year) {
+              array_push($invalid_lists, array(
+                "facebook_id" => $fb_spending["facebook_id"],
+                "error_message" => "Month and Year (billing_date) do not match with last month and year"
+              ));
+              $invalid_total++;
+              continue;
+            }
+
+            array_push($fb_spending_lists, $fb_spending);
+            $data_index++;
+            $valid_total++;
+          }
+        }
+        fclose($handle);
+        if ($valid_total == 0) {
+          $response = array(
+            "status" => "error",
+            "type" => "alert",
+            "data" => "",
+            "message" => "There are not any valid data to import"
+          );
+          echo json_encode($response);
+          exit;
+        }
+
+        $worker_id = $this->reportModel->createUpdateWorker("facebook_spending",$month, $year, $updated_by);
+        $worker_id = $worker_id["data"];
+        
+        foreach ($fb_spending_lists as $idx => $fb_spending) 
+        {
+          
+          // Find grandadmin_customer_id
+          $find_customer_id = $this->resourceModel->findCustomerID($fb_spending, "facebook");
+          print_r($find_customer_id);
+          if ($find_customer_id["status"] === "success") {
+            $fb_spending["grandadmin_customer_id"] = $find_customer_id["data"]["CustomerID"];
+          } else {
+            $fb_spending["grandadmin_customer_id"] = "";
+          }
+
+          // Find grandadmin_customer_name
+          $find_customer_name = $this->resourceModel->findCustomerName("facebookID", $fb_spending["facebook_id"]);
+          if ($find_customer_name["status"] === "success" && !empty($find_customer_name["data"])) {
+            if (empty($find_customer_name["bill_company"])) {
+              $customer_name = iconv('TIS-620','UTF-8',$find_customer_name["bill_firstname"]) . " " . iconv('TIS-620','UTF-8', $find_customer_name["bill_lastname"]);
+            } else {
+              $customer_name = iconv('TIS-620','UTF-8',$find_customer_name["bill_company"]);
+            }
+            $fb_spending["grandadmin_customer_name"] = $customer_name;
+          } else {
+            $fb_spending["grandadmin_customer_name"] = "";
+          }
+
+          // Find remaining_budget_customer_id
+          if ($fb_spending["grandadmin_customer_name"] !== "" && $fb_spending["grandadmin_customer_id"] !== "") {
+            $find_remaining_budget_customer_id = $this->resourceModel->findRemainingBudgetCustomerID($fb_spending["grandadmin_customer_id"],$fb_spending["grandadmin_customer_name"]);
+            if ($find_remaining_budget_customer_id["status"] === "success") {
+              $fb_spending["remaining_budget_customer_id"] = $find_remaining_budget_customer_id["data"];
+            } else {
+              $addnew_gac = $this->resourceModel->addNewGrandAdminCustomer($fb_spending["grandadmin_customer_id"], $fb_spending["grandadmin_customer_name"]);
+              if ($addnew_gac["status"] === "success" && empty($addnew_gac["data"])) {
+                $fb_spending["remaining_budget_customer_id"] = $addnew_gac["data"];
+              } else {
+                $fb_spending["remaining_budget_customer_id"] = NULL;
+              }
+            } 
+          } else {
+            $fb_spending["remaining_budget_customer_id"] = NULL;
+          }
+          $fb_spending_lists[$idx]["remaining_budget_customer_id"] = $fb_spending["remaining_budget_customer_id"];
+          $fb_spending_lists[$idx]["grandadmin_customer_id"] = $fb_spending["grandadmin_customer_id"];
+          $fb_spending_lists[$idx]["grandadmin_customer_name"] = $fb_spending["grandadmin_customer_name"];
+          if(!in_array($fb_spending["remaining_budget_customer_id"],$remaining_budget_customer_id_clear_list)){
+            $remaining_budget_customer_id_clear_list[] = $fb_spending["remaining_budget_customer_id"];
+          }
+          
+        }
+
+
+        //check and clear before replace
+        foreach ($remaining_budget_customer_id_clear_list as $idx => $value) 
+        {
+          if($value != NULL){
+            $this->resourceModel->clearFacebookSpendingByID($month, $year,$value["remaining_budget_customer_id"]);
+          }
+        }
+
+        //add new data
+        foreach ($fb_spending_lists as $idx => $value) 
+        {
+          $value["updated_by"] = $updated_by;
+          $insert_facebook_spending = $this->resourceModel->insertFacebookSpending($month, $year, $value);
+        }
+
+        // update google spending status on report status table
+        $update_status = $this->reportModel->updateReportStatusById($worker_id, "facebook_spending", "waiting");
+        $update_status = $this->reportModel->updateReportStatusById($worker_id, "overall_status", "waiting");
+        
+        $response = array(
+          "status" => "success"
+        );
+        echo json_encode($response);
+        exit;
+      } else {
+        $res = array(
+          "status" => "error",
+          "type" => "alert",
+          "meesage" => "Allow only POST method"
+        );
+        echo json_encode($res);
+        exit;
+      }
+    }
+  }
+
+  public function updateApiData()
+  {
+    header("Content-Type: application/json");
+    if ($_SERVER["REQUEST_METHOD"] === "POST") {
+      $month = $_POST["month"];
+      $year = $_POST["year"];
+      $updated_by = $_POST["updated_by"];
+      $media_wallet = $_POST["media_wallet"];
+      $withholding_tax = $_POST["withholding_tax"];
+      $free_click_cost = $_POST["free_click_cost"];
+      $remaining_ice = $_POST["remaining_ice"];
+      if($media_wallet == 'true'){
+        $worker_id = $this->reportModel->createUpdateWorker("media_wallet",$month, $year, $updated_by);
+      }
+      if($withholding_tax == 'true'){
+        $worker_id = $this->reportModel->createUpdateWorker("withholding_tax",$month, $year, $updated_by);
+      }
+      if($free_click_cost == 'true'){
+        $worker_id = $this->reportModel->createUpdateWorker("free_click_cost",$month, $year, $updated_by);
+      }
+      if($remaining_ice == 'true'){
+        $worker_id = $this->reportModel->createUpdateWorker("remaining_ice",$month, $year, $updated_by);
+      }
+      
+      $worker_id = $worker_id["data"];
+      $response = array(
+        "status" => "success"
+      );
+      echo json_encode($response);
+      exit;
+    }
+  }
+
+
+  public function importWalletTransfer()
+  {
+    header("Content-Type: application/json");
+    if ($_SERVER["REQUEST_METHOD"] === "POST") {
+      $allowedFileType = array(
+        'application/vnd.ms-excel',
+        'text/xls',
+        'text/xlsx',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
+
+      if (!in_array($_FILES["transferInputFile"]["type"], $allowedFileType)) {
+        $res = array(
+          "status" => "fail",
+          "error" => "Not allowed file type"
+        );
+        echo json_encode($res);
+      }
+
+      $file_name = $_FILES["transferInputFile"]["name"];
+      $targetFilePath = $_FILES["transferInputFile"]["tmp_name"];
+      $month = date("m",strtotime("-1 month"));
+      $year = date("Y",strtotime("-1 month"));
+      $wallet_transfers = array();
+      $data_index = 0;
+      $import_result = array();
+      if (($handle = fopen($targetFilePath, "r")) !== FALSE) {
+        while (!feof($handle)) {
+          $row = fgetcsv($handle);
+          if($data_index != 0){
+            $wallet_transfer = array(
+              "source_grandadmin_customer_id" => $row[0],
+              "source_grandadmin_customer_name" => $row[1],
+              "destination_grandadmin_customer_id" => $row[2],
+              "destination_grandadmin_customer_name" => $row[3],
+              "source_value" => $row[4],
+              "note" => $row[5],
+              "clearing" => $row[6]
+            );
+            array_push($wallet_transfers, $wallet_transfer);
+          }          
+          $data_index++;
+        }
+        fclose($handle);
+
+        // Clear data by month and year
+        // $this->resourceModel->clearWalletTransferByMonthYear($month, $year);
+        
+        foreach ($wallet_transfers as $idx => $wallet_transfer) 
+        {
+          if ($wallet_transfers[$idx]["source_grandadmin_customer_id"] !== "" && $wallet_transfers[$idx]["source_grandadmin_customer_name"] !== "" && 
+          $wallet_transfers[$idx]["destination_grandadmin_customer_id"] !== "" && $wallet_transfers[$idx]["destination_grandadmin_customer_name"] !== "") {
+            $wallet_transfers[$idx]["source_remaining_budget_customer_id"] = $this->getRemainingBudgetCustomerId('grandadmin',$wallet_transfers[$idx]["source_grandadmin_customer_id"],$wallet_transfers[$idx]["source_grandadmin_customer_name"],'wallet_transfer');
+            $wallet_transfers[$idx]["destination_remaining_budget_customer_id"] = $this->getRemainingBudgetCustomerId('grandadmin',$wallet_transfers[$idx]["destination_grandadmin_customer_id"],$wallet_transfers[$idx]["destination_grandadmin_customer_name"],'wallet_transfer');
+            $insert_wallet_transfer = $this->resourceModel->insertWalletTransfer($month, $year, $wallet_transfers[$idx]);
+
+          }
+
+        }
+      } else {
+        $res = array(
+          "status" => "fail",
+          "error" => "Can not open file"
+        );
+        echo json_encode($res);
+      }
+    } else {
+      $res = array(
+        "status" => "fail",
+        "error" => "Allow only POST method"
+      );
+      echo json_encode($res);
     }
   }
   

@@ -19,9 +19,14 @@ $(document).ready(function () {
     ajax: {
       url: base_url + "/customers/get-customers",
       type: 'POST',
-      data: {
-        filter_parentid: 'more_than_one',
-        filter_payment: 'all'
+      data: function(d) {
+        filters: {
+          d.action_type = 'get_data',
+          d.filters = {
+            filter_parent_id: $('#filterParentId').val(),
+            filter_payment: $('#filterPaymentMethod').val()
+          }
+        }
       }
     },
     columns: [
@@ -91,6 +96,15 @@ $(document).ready(function () {
       },
     ],
     scrollX: true,
+  });
+
+  $('#apply_filter').click(function() {
+    customer_table.ajax.reload();
+  });
+  
+  $('#reset_filter').click(function() {
+    $('#filterParentId').val('all');
+    $('#filterPaymentMethod').val('all');
   });
 
   $("#customers-table tbody").on("click", ".delete-customer", function () {
@@ -251,8 +265,11 @@ $(document).ready(function () {
   });
 
   $("#exportCustomers").click(function () {
+    var customer_params = customer_table.ajax.params();
+    customer_params.action_type = 'export';
+
     var xhr = new XMLHttpRequest();
-    xhr.open("GET", base_url + "/customers/export-customers");
+    xhr.open("POST", base_url + "/customers/get-customers");
     xhr.responseType = "blob";
     xhr.onload = function () {
       if (this.status === 200) {
@@ -293,8 +310,10 @@ $(document).ready(function () {
         }
       }
     };
-    xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
-    xhr.send();
+    // xhr.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+    xhr.setRequestHeader("Content-Type", "application/json");
+    xhr.send(JSON.stringify(customer_params));
+
   });
 
 });

@@ -24,6 +24,10 @@ if ($argv[1] === "media_wallet") {
 } else if ($argv[1] === "free_click_cost") {
   $freeClickCostResources = new FreeClickCostResources();
   $freeClickCostResources->run();
+} else if ($argv[1] === "ice") {
+  require_once "RemainingICE.php";
+  $remaining_ice = new RemainingICE();
+  $remaining_ice->run();
 } else {
   echo "\n -- Not found resource name param -- \n";
   exit;

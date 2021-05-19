@@ -10,7 +10,7 @@
 </script>
 
 <!-- CONTENT -->
-<div class="container-fluid mt-5 customer-page">
+<div class="container-fluid customer-page">
   <br>
   <div class="row">
     <div class="col-md-6">
@@ -25,17 +25,17 @@
   <hr>
 
   <div class="row  p-2 m-0 mb-2">
-    <div class="col-md-6 p-0">
+    <div class="col-md-5 p-0">
       <!-- <button> <span> <i class='bx bx-filter'></i> Filter </span> </button> -->
       <!--  -->
-      <div class="border p-2 mt-2 rounded">
+      <div class="p-2 mt-2">
       <div class="form-group row">
         <label for="filterParentId" class="col-sm-3 col-form-label">Parent ID</label>
         <div class="col-sm-5">
-          <select name="" id="filterParentId" class="form-control">
-            <option value="">All</option>
-            <option value="">More than one child</option>
-            <option value="">One child</option>
+          <select name="" id="filterParentId" class="form-control form-control-sm">
+            <option value="all">All</option>
+            <option value="more_than_one_child">More than one child</option>
+            <option value="one_child">One child</option>
           </select>
         </div>
       </div>
@@ -44,24 +44,26 @@
       <div class="form-group row">
         <label for="filterPaymentMethod" class="col-sm-3 col-form-label">Payment Method</label>
         <div class="col-sm-5">
-          <select name="" id="filterPaymentMethod" class="form-control">
-            <option value="">All</option>
-            <option value="">Prepaid</option>
-            <option value="">Postpaid</option>
+          <select name="" id="filterPaymentMethod" class="form-control form-control-sm">
+            <option value="all">All</option>
+            <option value="prepaid">Prepaid</option>
+            <option value="postpaid">Postpaid</option>
           </select>
         </div>
       </div>
       <!--  -->
       <!--  -->
-      <!-- <div class="form-group row">
-        <button class="btn btn-default">Filter</button>
-      </div> -->
+      <div class="text-center">
+        <button style="margin:10px 5px;" id="apply_filter" class="btn btn-add btn-sm pull-right"><i class='bx bx-filter-alt'></i>Apply</button>
+        <button style="margin:10px 5px;" id="reset_filter" class="btn btn-tools btn-sm pull-right"><i class='bx bx-reset' ></i>Reset</button>
+      </div>
       <!--  -->
       </div>
     </div>
-    <div class="col-md-6 text-right">
-      <button type="button" class="btn btn-primary" id="importCustomers"><i class='bx bx-add-to-queue'></i> Add / Replace</button>
-      <button type="button" class="btn btn-warning" style="margin-left: 5px;" id="exportCustomers"><i class='bx bx-export'></i> Export</button>
+    <!-- RIGHT BUTTON -->
+    <div class="col-md-7 text-right">
+      <button type="button" class="btn btn-add" id="importCustomers"><i class='bx bx-add-to-queue'></i> Add / Replace</button>
+      <button type="button" class="btn btn-export" style="margin-left: 5px;" id="exportCustomers"><i class='bx bx-export'></i> Export</button>
     </div>
   </div>
 
@@ -154,6 +156,56 @@
               </div>
             </div>
           </div>
+
+          <div class="row">
+            <div class="col-md-5">
+            <!-- <button id="reconcile_quick_view_btn" class="btn btn-tools" data-bs-toggle="modal" role="button"><i class='bx bx-columns'></i></button>
+            <button id="reconcile_full_view_btn" class="btn btn-tools" data-bs-toggle="modal" role="button"><i class='bx bx-table'></i></button> -->
+              <label id="filter-container-btn" style="cursor:pointer;"><i class='bx bx-filter-alt'></i> Filter </label>
+              <div id="filter-container">
+                <div class="form-inline" style="padding-top:10px;">
+                  <label style="padding-right:33px;">Cash Advance</label>
+                  <select class="form-control form-control-sm" id="filter_cash_advance_condition">
+                    <option value="equal">Equal</option>
+                    <option value="less_than">Less than</option>
+                    <option value="greater_than">Greater than</option>
+                    <option value="not">Not</option>
+                  </select>
+                  <input id="filter_cash_advance" style="margin-left:10px;" class="form-control form-control-sm" type="text" placeholder="">
+                </div>
+                <div class="form-inline" style="padding-top:10px;">
+                  <label style="padding-right:10px;">Remaining Budget</label>
+                  <select class="form-control form-control-sm" id="filter_remaining_budget_condition">
+                    <option value="equal">Equal</option>
+                    <option value="less_than">Less than</option>
+                    <option value="greater_than">Greater than</option>
+                    <option value="not">Not</option>
+                  </select>
+                  <input id="filter_remaining_budget" style="margin-left:10px;" class="form-control form-control-sm" type="text" placeholder="">
+                </div>
+                <div class="form-inline" style="padding-top:10px;">
+                  <label style="padding-right:55px;">Difference</label>
+                  <select class="form-control form-control-sm" id="filter_difference_condition">
+                    <option value="equal">Equal</option>
+                    <option value="less_than">Less than</option>
+                    <option value="greater_than">Greater than</option>
+                    <option value="not">Not</option>
+                  </select>
+                  <input id="filter_difference" style="margin-left:10px;" class="form-control form-control-sm" type="text" placeholder="">
+                </div>
+                <div class="col-md-12">
+                  <button style="margin:10px 5px;" id="apply_filter" class="btn btn-add btn-sm pull-right" data-bs-toggle="modal" role="button"><i class='bx bx-filter-alt'></i>Apply</button>
+                  <button style="margin:10px 5px;"id="reset_filter" class="btn btn-tools btn-sm pull-right" data-bs-toggle="modal" role="button"><i class='bx bx-reset' ></i>Reset</button>
+                </div>
+              </div>
+            </div>
+            <div class="col-md-2"></div>
+            <div class="col-md-5 text-right">
+              <button id="reconcile_add_replace_btn" class="btn btn-add" data-bs-toggle="modal" href="#modal" role="button"><i class='bx bx-add-to-queue'></i> Add / Replace</button>
+              <button id="reconcile_export_btn" class="btn btn-export" style="margin-left: 5px;" data-bs-toggle="modal" role="button"><i class='bx bx-export'></i> Export</button>
+              <button id="reconcile_export_btn" class="btn btn-export" style="margin-left: 5px;" data-bs-toggle="modal" role="button"><i class='bx bx-list-check'></i> Close Period</button>
+            </div>
+          </div>
           
           <table class="table table-bordered">
             <thead>
@@ -191,56 +243,56 @@
             <div class="form-row">
               <div class="form-group col-md-6">
                 <label for="inputID">ID</label>
-                <input disabled type="text" class="form-control" id="inputID" value="xxxx">
+                <input disabled type="text" class="form-control form-control-sm" id="inputID" value="xxxx">
               </div>
 
               <div class="form-group col-md-6">
                 <label for="inputParentID">Parent ID</label>
-                <input type="text" class="form-control" id="inputParentID">
+                <input type="text" class="form-control form-control-sm" id="inputParentID">
               </div>
             </div>
             <!--  -->
             <div class="form-row">
               <div class="form-group col-md-12">
                 <label for="inputCustomerID">Customer ID</label>
-                <input type="text" class="form-control" id="inputCustomerID">
+                <input type="text" class="form-control form-control-sm" id="inputCustomerID">
               </div>
             </div>
             <!--  -->
             <div class="form-row">
               <div class="form-group col-md-12">
                 <label for="inputCustomerName">Customer Name</label>
-                <input type="text" class="form-control" id="inputCustomerName">
+                <input type="text" class="form-control form-control-sm" id="inputCustomerName">
               </div>
             </div>
             <!--  -->
             <div class="form-row">
               <div class="form-group col-md-12">
                 <label for="inputOffsetAcct">Offset Acct</label>
-                <input type="text" class="form-control" id="inputOffsetAcct">
+                <input type="text" class="form-control form-control-sm" id="inputOffsetAcct">
               </div>
             </div>
             <!--  -->
             <div class="form-row">
               <div class="form-group col-md-12">
                 <label for="inputOffsetAcctName">Offset Acct Name</label>
-                <input type="text" class="form-control" id="inputOffsetAcctName">
+                <input type="text" class="form-control form-control-sm" id="inputOffsetAcctName">
               </div>
             </div>
             <!--  -->
             <div class="form-row">
               <div class="form-group col-md-6">
                 <label for="inputCompany">Company</label>
-                <!-- <input type="text" class="form-control" id="inputCompany"> -->
-                <select class="form-control" id="inputCompany">
+                <!-- <input type="text" class="form-control form-control-sm" id="inputCompany"> -->
+                <select class="form-control form-control-sm" id="inputCompany">
                   <option value="RPTH">RPTH</option>
                   <!-- <option value="MAX">MAX</option> -->
                 </select>
               </div>
               <div class="form-group col-md-6">
                 <label for="inputPaymentMethod">Payment Method</label>
-                <!-- <input type="text" class="form-control" id="inputPaymentMethod"> -->
-                <select class="form-control" id="inputPaymentMethod">
+                <!-- <input type="text" class="form-control form-control-sm" id="inputPaymentMethod"> -->
+                <select class="form-control form-control-sm" id="inputPaymentMethod">
                   <option value="prepaid">prepaid</option>
                   <!-- <option value="postpaid">postpaid</option> -->
                 </select>

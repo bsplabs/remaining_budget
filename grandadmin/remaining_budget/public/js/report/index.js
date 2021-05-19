@@ -150,6 +150,25 @@ $(document).ready(function() {
     }
   });
 
+  $('#upload_transfer_file_form').submit(function(event) {
+    event.preventDefault();
+    console.log($(this))
+    var formData = new FormData($(this)[0]);
+    console.log('Upload wallet transfer');
+    console.log(formData);
+
+    $.ajax({
+      url: base_url + '/resources/import_wallet_transfer',
+      type: 'POST',
+      data: formData,
+      processData: false,
+      contentType: false,
+      success:function(data) {
+        console.log(data);
+      }
+    });
+  });
+
 
   //  Month and year drop-down change
   $('#month-year-selector').change(function() {
@@ -340,6 +359,8 @@ function importFacebookSpending(formData, ignore_invalid_data) {
     }
   });
 }
+
+
 
 function loadingUIForFirstGetStatusResources(cmd) {
   if (cmd === 'open') {

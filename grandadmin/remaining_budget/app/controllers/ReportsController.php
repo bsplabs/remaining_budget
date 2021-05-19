@@ -49,18 +49,20 @@ class ReportsController extends Controller
 
     // check report status
     $reportStatus = $this->reportModel->getReporttStatus($month, $year);
-    if ($reportStatus["status"] === "success" && empty($reportStatus["data"])) {
-      $this->reportModel->createReportStatus($month, $year);
-      $reportStatus["data"]["overall_status"] = "pending";
-    }
-    // $data["overall_status"] = $reportStatus["data"]["overall_status"];
+    $is_update_not_complete = $this->reportModel->getNotCompleteReportUpdateStatus($month, $year);
 
     $this->view('layout/header', array("title" => "Reports - The Remaining Budget"));
-    if ($reportStatus["status"] === "success" && $reportStatus["data"]["overall_status"] === "completed") {
+    if ($reportStatus["status"] === "success" && $reportStatus["data"]["overall_status"] === "completed" && !$is_update_not_complete["data"]) {
+      $is_closed = $this->reportModel->checkClosed($data["month"],$data["year"]);
+      if($is_closed["status"] == "success"){
+        $data["is_closed"] = $is_closed["data"];
+      }else{
+        $data["is_closed"] = false;
+      }
       $this->view('report/reconcile', $data);
-    } else if ($reportStatus["status"] === "success" && ($reportStatus["data"]["overall_status"] === "pending" || $reportStatus["data"]["overall_status"] === "processing")) {
+    } else if ($reportStatus["status"] === "success" && ($reportStatus["data"]["overall_status"] === "pending")) {
       $this->view('report/index', $data);
-    } else if ($reportStatus["status"] === "success" && $reportStatus["data"]["overall_status"] === "waiting") {
+    } else if (($reportStatus["status"] === "success" && $reportStatus["data"]["overall_status"] === "waiting") || $is_update_not_complete["data"]) {
       $this->view('report/processing', $data);
     } else {
       $this->view('report/error');
@@ -81,6 +83,12 @@ class ReportsController extends Controller
     $data["report_data"] = $data["report_data"]["data"];
     $rembudgetBasic = $this->reportModel->getBasicRemainingBudgetValue();
     $data["testData"] = $rembudgetBasic["data"];
+    $is_closed = $this->reportModel->checkClosed($data["month"],$data["year"]);
+    if($is_closed["status"] == "success"){
+      $data["is_closed"] = $is_closed["data"];
+    }else{
+      $data["is_closed"] = false;
+    }
     $this->view('layout/header', array("title" => "Reports - The Remaining Budget"));
     $this->view('report/reconcile', $data);
     $this->view('layout/footer');
@@ -125,7 +133,7 @@ class ReportsController extends Controller
   {
     $reconcile_data = $this->reportModel->getReconcileDataByReportId($report_id);
     $reconcile_data = $reconcile_data["data"];
-    $cash_advance = $reconcile_data['last_month_remaining'] + $reconcile_data['adjustment_remain'] + $reconcile_data['receive'] + $reconcile_data['invoice'] + $reconcile_data['transfer'] + $reconcile_data['ads_credit_note'] - $reconcile_data['spending_invoice'] + $reconcile_data['adjustment_free_click_cost'] + $reconcile_data['adjustment_free_click_cost_old'] + $reconcile_data['adjustment_cash_advance'] + $reconcile_data['adjustment_max'];
+    $cash_advance = $reconcile_data['last_month_remaining'] + $reconcile_data['adjustment_remain'] + $reconcile_data['receive'] + $reconcile_data['invoice'] + $reconcile_data['transfer'] + $reconcile_data['ads_credit_note'] + $reconcile_data['spending_invoice'] + $reconcile_data['adjustment_free_click_cost'] + $reconcile_data['adjustment_free_click_cost_old'] + $reconcile_data['adjustment_cash_advance'] + $reconcile_data['adjustment_max'];
     $remaining_budget = $reconcile_data['remaining_ice'] + $reconcile_data['wallet'] + $reconcile_data['wallet_free_click_cost'] + $reconcile_data['withholding_tax'] + $reconcile_data['adjustment_front_end'];
     $difference = $remaining_budget - $cash_advance;
 
@@ -136,6 +144,134 @@ class ReportsController extends Controller
   {
     $this->generateRemainingBudget = true;
     header("Location: /reports/reconcile");
+  }
+
+  public function export()
+  {
+    if ($_SERVER["REQUEST_METHOD"] === "POST") {
+      $filename = "click_remaining_budget_reconcile_".date("YmdHis").".csv";
+      header( 'Content-Type: text/csv' );
+      header( 'Content-Disposition: attachment;filename='.$filename);
+      $fp = fopen('php://output', 'w');
+      $filter_cash_advance_condition = $_POST["filter_cash_advance_condition"];
+      $filter_cash_advance = $_POST["filter_cash_advance"];
+      $filter_remaining_budget_condition = $_POST["filter_remaining_budget_condition"];
+      $filter_remaining_budget = $_POST["filter_remaining_budget"];
+      $filter_difference_condition = $_POST["filter_difference_condition"];
+      $filter_difference = $_POST["filter_difference"];
+      $search = $_POST["search"];
+
+      $condition_signs = array("equal"=> "=", "less_than" => "<", "greater_than" => ">" , "not_equal" => "!=");
+      $condition = "";
+      if($filter_cash_advance != "" && !empty($condition_signs[$filter_cash_advance_condition]) ){
+        $condition .= "cash_advance ".$condition_signs[$filter_cash_advance_condition]." :cash_advance";
+      }else{
+        $filter_cash_advance = "";
+      }
+
+      if($filter_remaining_budget != "" && !empty($condition_signs[$filter_remaining_budget_condition])){
+        if($condition!=""){
+          $condition .= " AND ";
+        }
+        $condition .= "remaining_budget ".$condition_signs[$filter_remaining_budget_condition]." :remaining_budget";
+      }else{
+        $filter_remaining_budget = "";
+      }
+
+      if($filter_difference != "" && !empty($condition_signs[$filter_difference_condition])){
+        if($condition!=""){
+          $condition .= " AND ";
+        }
+        $condition .= "difference ".$condition_signs[$filter_difference_condition]." :difference";
+      }else{
+        $filter_difference = "";
+      }
+
+      if($search != "" ){
+        if($condition!=""){
+          $condition .= " AND ";
+        }
+        $condition .= "c.parent_id like concat('%', :search, '%') ";
+      }else{
+        $search = "";
+      }
+    
+  
+      $results = $this->reportModel->getReportByQuery($filter_cash_advance,$filter_remaining_budget,$filter_difference,$search,$condition);
+  
+      if($results["status"] == "success"){
+        fputcsv($fp, $results["header"]);
+        foreach ($results["data"] as $data){
+          fputcsv($fp, $data);
+        }
+        fclose($fp);   
+      }else{
+        header("Content-Type: application/json");
+      $res = array(
+        "status" => "fail",
+        "message" => $results["data"]
+      );
+      echo json_encode($res);
+      exit;
+      }
+       
+    }else{
+      header("Content-Type: application/json");
+      $res = array(
+        "status" => "fail"
+      );
+      echo json_encode($res);
+      exit;
+    }
+    
+  }
+
+  public function closePeriod()
+  {
+    header("Content-Type: application/json");
+    if ($_SERVER["REQUEST_METHOD"] === "POST") {
+      $month = $_POST["month"];
+      $year = $_POST["year"];
+      $created_by = $_POST["created_by"];
+      $is_closed = $this->reportModel->checkClosed($month, $year);
+      if($is_closed["status"] == 'success'){
+        if($is_closed["data"]){
+          $res = array(
+            "status" => "closed"
+          );
+          echo json_encode($res);
+          exit;
+        }else{
+          $mark_close = $this->reportModel->closePeriod($month, $year, $created_by);
+          $server_month = date("m");
+          $server_year = date("Y");
+          $is_this_month_job_exit = $this->reportModel->checkThisMonthJob($server_month, $server_year);
+          if(!$is_this_month_job_exit){
+            $create_job = $this->reportModel->createReportStatus($server_month, $server_year);
+          }
+          if($mark_close){
+            $res = array(
+              "status" => "success"
+            );
+            echo json_encode($res);
+            exit;
+          }else{
+            $res = array(
+              "status" => "fail"
+            );
+            echo json_encode($res);
+            exit;
+          }
+        }
+      }else{
+        $res = array(
+          "status" => "fail"
+        );
+        echo json_encode($res);
+        exit;
+      }
+      
+    }
   }
 
   public function uploadCashAdvance()
@@ -222,6 +358,7 @@ class ReportsController extends Controller
     $highestRow = $excelSheet->getHighestRow(); // e.g. 10
 
     $glCodeWhiteLists = array("212412", "212413", "212415", "412112");
+    $glSeriesWhiteLists = array("IN","IV","CN","CV");
 
     $glCashAdvance = array();
     $total = 0;
@@ -235,16 +372,23 @@ class ReportsController extends Controller
 
     for ($row = 1; $row <= $highestRow; ++$row) {
       $glCode = $excelSheet->getCell("F" . $row)->getValue();
+      
       if (empty($glCode) || !is_numeric($glCode)) {
         if (!in_array($glCode, $glCodeWhiteLists)) {
           continue;
         }
       }
 
+      $series = $excelSheet->getCell("C" . $row)->getValue();
+      $series_type = substr($series, 0, 2);
+      
+      if (!in_array(strtoupper($series_type), $glSeriesWhiteLists)) {
+        continue;
+      }
+
       $total++;
       $postingDate = $excelSheet->getCell("A" . $row)->getValue();
       $dueDate = $excelSheet->getCell("B" . $row)->getValue();
-      $series = $excelSheet->getCell("C" . $row)->getValue();
       $docNo = $excelSheet->getCell("D" . $row)->getValue();
       $transNo = $excelSheet->getCell("E" . $row)->getValue();
 
@@ -311,7 +455,7 @@ class ReportsController extends Controller
       $offsetAcct = $excelSheet->getCell("H" . $row)->getValue();
       $offsetAcctName = $excelSheet->getCell("I" . $row)->getValue();
       $cumulativeBalanceLc = $excelSheet->getCell("L" . $row)->getValue();
-      $seriesPrefix = $series[0] . $series[1];
+      $seriesPrefix = $series_type;
 
       array_push($glCashAdvance, array(
         "posting_date" => $postingDate,
@@ -380,8 +524,6 @@ class ReportsController extends Controller
       $customerID = $this->reportModel->checkCustomerExists($val["offset_acct"], $val["offset_acct_name"]);
       if (empty($customerID["data"])) {
         $customerID = $this->reportModel->insertNewCustomer($val["offset_acct"], $val["offset_acct_name"]);
-      } else {
-        $customerID["data"] = NULL;
       }
       $val["remaining_budget_customer_id"] = $customerID["data"];
       $this->reportModel->insertGLCashAdvance($val);
@@ -443,6 +585,6 @@ class ReportsController extends Controller
   function parseMonthYear($month, $year)
   {
     $date_obj = DateTime::createFromFormat("!m", $month);
-    return $date_obj->format("F") . "/" . $year;
+    return $date_obj->format("F") . " / " . $year;
   }
 }
