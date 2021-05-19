@@ -54,8 +54,8 @@
       <!--  -->
       <!--  -->
       <div class="text-center">
-        <button style="margin:10px 5px;" id="apply_filter" class="btn btn-add btn-sm pull-right"><i class='bx bx-filter-alt'></i>Apply</button>
         <button style="margin:10px 5px;" id="reset_filter" class="btn btn-tools btn-sm pull-right"><i class='bx bx-reset' ></i>Reset</button>
+        <button style="margin:10px 5px;" id="apply_filter" class="btn btn-add btn-sm pull-right"><i class='bx bx-filter-alt'></i>Apply</button>
       </div>
       <!--  -->
       </div>
@@ -154,56 +154,6 @@
                   <li>Fail: <span id="resultImportCustomerReplaceFail"></span></li>
                 </ul>
               </div>
-            </div>
-          </div>
-
-          <div class="row">
-            <div class="col-md-5">
-            <!-- <button id="reconcile_quick_view_btn" class="btn btn-tools" data-bs-toggle="modal" role="button"><i class='bx bx-columns'></i></button>
-            <button id="reconcile_full_view_btn" class="btn btn-tools" data-bs-toggle="modal" role="button"><i class='bx bx-table'></i></button> -->
-              <label id="filter-container-btn" style="cursor:pointer;"><i class='bx bx-filter-alt'></i> Filter </label>
-              <div id="filter-container">
-                <div class="form-inline" style="padding-top:10px;">
-                  <label style="padding-right:33px;">Cash Advance</label>
-                  <select class="form-control form-control-sm" id="filter_cash_advance_condition">
-                    <option value="equal">Equal</option>
-                    <option value="less_than">Less than</option>
-                    <option value="greater_than">Greater than</option>
-                    <option value="not">Not</option>
-                  </select>
-                  <input id="filter_cash_advance" style="margin-left:10px;" class="form-control form-control-sm" type="text" placeholder="">
-                </div>
-                <div class="form-inline" style="padding-top:10px;">
-                  <label style="padding-right:10px;">Remaining Budget</label>
-                  <select class="form-control form-control-sm" id="filter_remaining_budget_condition">
-                    <option value="equal">Equal</option>
-                    <option value="less_than">Less than</option>
-                    <option value="greater_than">Greater than</option>
-                    <option value="not">Not</option>
-                  </select>
-                  <input id="filter_remaining_budget" style="margin-left:10px;" class="form-control form-control-sm" type="text" placeholder="">
-                </div>
-                <div class="form-inline" style="padding-top:10px;">
-                  <label style="padding-right:55px;">Difference</label>
-                  <select class="form-control form-control-sm" id="filter_difference_condition">
-                    <option value="equal">Equal</option>
-                    <option value="less_than">Less than</option>
-                    <option value="greater_than">Greater than</option>
-                    <option value="not">Not</option>
-                  </select>
-                  <input id="filter_difference" style="margin-left:10px;" class="form-control form-control-sm" type="text" placeholder="">
-                </div>
-                <div class="col-md-12">
-                  <button style="margin:10px 5px;" id="apply_filter" class="btn btn-add btn-sm pull-right" data-bs-toggle="modal" role="button"><i class='bx bx-filter-alt'></i>Apply</button>
-                  <button style="margin:10px 5px;"id="reset_filter" class="btn btn-tools btn-sm pull-right" data-bs-toggle="modal" role="button"><i class='bx bx-reset' ></i>Reset</button>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-2"></div>
-            <div class="col-md-5 text-right">
-              <button id="reconcile_add_replace_btn" class="btn btn-add" data-bs-toggle="modal" href="#modal" role="button"><i class='bx bx-add-to-queue'></i> Add / Replace</button>
-              <button id="reconcile_export_btn" class="btn btn-export" style="margin-left: 5px;" data-bs-toggle="modal" role="button"><i class='bx bx-export'></i> Export</button>
-              <button id="reconcile_export_btn" class="btn btn-export" style="margin-left: 5px;" data-bs-toggle="modal" role="button"><i class='bx bx-list-check'></i> Close Period</button>
             </div>
           </div>
           

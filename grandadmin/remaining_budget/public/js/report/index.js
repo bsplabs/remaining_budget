@@ -184,6 +184,10 @@ $(document).ready(function() {
     var parent_class = parent[0].className.split(" ");
     resourceImportBoxChangeState('.' + parent_class[parent_class.length - 1], 'pending')
   });
+  
+  $("#generateButton").click(function(){
+    generateReport();
+  });
 
 });
 
@@ -493,4 +497,28 @@ function buttonGenerateChecking($overall_status, $allowed_generate_data)
   } else {
     $("#generateButton").prop('disabled', true);
   }
+}
+
+function generateReport(){
+  updated_by = "kittisak";
+  $.ajax({
+    url: base_url + '/reports/generate-report',
+    type: 'POST',
+    data: {month: month, year:year, updated_by: updated_by},
+    success:function(res) {
+      if(res.status == "success"){
+        if($("#reconcile_add_replace_modal").hasClass('show')){
+          $("#reconcile_add_replace_modal").modal('hide');
+        }
+        $("#toast_header").text("Queue created.");
+        $("#toast_body").text("Please come back later.");
+        $("#liveToast").toast('show');
+        location.reload();
+      }else{
+        $("#toast_header").text("Something wrong!!!");
+        $("#toast_body").text("Please try again.");
+        $("#liveToast").toast('show');
+      }
+    }
+  });
 }

@@ -20,7 +20,8 @@ function getReconcileDate(){
             type: 'POST',
             data: {parent_id:value.parent_id},
             success: function(res) {
-              html = `<tr data-report_id="`+value.report_id+`" style="background-color:#eeeeff;">
+              html = `<tr id="parent_tr_`+value.parent_id+`" data-report_id="`+value.report_id+`" style="background-color:#eeeeff;">
+                
                 <td>`+value.parent_id+`<i data-parent_id="`+value.parent_id+`" class="fa fa-chevron-up pull-right expand-able" aria-hidden="true"></i></td>
                 <td></td>
                 <td></td>
@@ -261,10 +262,15 @@ function closePeriod(){
     data: {year:year,month:month,created_by: created_by},
     success:function(res) {
       if(res.status == "success"){
-
+        $("#toast_header").text("Closed");
+        $("#toast_body").text("Reconcile Data is closed");
+        $("#liveToast").toast('show');
         location.reload();
       }else{
         $("#modalClosePeriod").modal('hide');
+        $("#toast_header").text("Something wrong!!!");
+        $("#toast_body").text("Please try again.");
+        $("#liveToast").toast('show');
       }
     }
   });
@@ -291,6 +297,13 @@ function updateGoogleSpending() {
         if($("#reconcile_add_replace_modal").hasClass('show')){
           $("#reconcile_add_replace_modal").modal('hide');
         }
+        $("#toast_header").text("Queue created.");
+        $("#toast_body").text("Please come back later.");
+        $("#liveToast").toast('show');
+      }else{
+        $("#toast_header").text("Something wrong!!!");
+        $("#toast_body").text("Please try again.");
+        $("#liveToast").toast('show');
       }
     }
   });
@@ -318,10 +331,113 @@ function updateFacebookSpending() {
         if($("#reconcile_add_replace_modal").hasClass('show')){
           $("#reconcile_add_replace_modal").modal('hide');
         }
+        $("#toast_header").text("Queue created.");
+        $("#toast_body").text("Please come back later.");
+        $("#liveToast").toast('show');
+      }else{
+        $("#toast_header").text("Something wrong!!!");
+        $("#toast_body").text("Please try again.");
+        $("#liveToast").toast('show');
       }
     }
   });
   
+}
+
+function updateWalletTransfer(){
+  var formData = new FormData();
+
+  formData.append("month", month);
+  formData.append("year", year);
+  formData.append("transferInputFile",$('#reconcile_add_replace_file')[0].files[0])
+  formData.append("updated_by", "kittisak");
+
+
+  $.ajax({
+    url: base_url + '/resources/update-wallet-transfer',
+    type: 'POST',
+    data: formData,
+    processData: false,
+    contentType: false,
+    success:function(res) {
+      if(res.status == "success"){
+        if($("#reconcile_add_replace_modal").hasClass('show')){
+          $("#reconcile_add_replace_modal").modal('hide');
+        }
+        $("#toast_header").text("Queue created.");
+        $("#toast_body").text("Please come back later.");
+        $("#liveToast").toast('show');
+      }else{
+        $("#toast_header").text("Something wrong!!!");
+        $("#toast_body").text("Please try again.");
+        $("#liveToast").toast('show');
+      }
+    }
+  });
+}
+
+function updateGlCashAdvance(){
+  var formData = new FormData();
+
+  formData.append("month", month);
+  formData.append("year", year);
+  formData.append("cashAdvanceInputFile",$('#reconcile_add_replace_file')[0].files[0])
+  formData.append("updated_by", "kittisak");
+
+
+  $.ajax({
+    url: base_url + '/reports/update-cash-advance',
+    type: 'POST',
+    data: formData,
+    processData: false,
+    contentType: false,
+    success:function(res) {
+      if(res.status == "success"){
+        if($("#reconcile_add_replace_modal").hasClass('show')){
+          $("#reconcile_add_replace_modal").modal('hide');
+        }
+        $("#toast_header").text("Queue created.");
+        $("#toast_body").text("Please come back later.");
+        $("#liveToast").toast('show');
+      }else{
+        $("#toast_header").text("Something wrong!!!");
+        $("#toast_body").text("Please try again.");
+        $("#liveToast").toast('show');
+      }
+    }
+  });
+}
+
+function updateAdjustment(){
+  var formData = new FormData();
+
+  formData.append("month", month);
+  formData.append("year", year);
+  formData.append("AdjustmentInputFile",$('#reconcile_add_replace_file')[0].files[0])
+  formData.append("updated_by", "kittisak");
+
+
+  $.ajax({
+    url: base_url + '/resources/update-adjustment',
+    type: 'POST',
+    data: formData,
+    processData: false,
+    contentType: false,
+    success:function(res) {
+      if(res.status == "success"){
+        if($("#reconcile_add_replace_modal").hasClass('show')){
+          $("#reconcile_add_replace_modal").modal('hide');
+        }
+        $("#toast_header").text("Queue created.");
+        $("#toast_body").text("Please come back later.");
+        $("#liveToast").toast('show');
+      }else{
+        $("#toast_header").text("Something wrong!!!");
+        $("#toast_body").text("Please try again.");
+        $("#liveToast").toast('show');
+      }
+    }
+  });
 }
 
 $( document ).ready(function() {
@@ -483,10 +599,20 @@ $( document ).ready(function() {
 
     if($("#file-re-upload-selector").val() == 'google_spending'){
       updateGoogleSpending();
-    }
-
-    if($("#file-re-upload-selector").val() == 'facebook_spending'){
+    }else if($("#file-re-upload-selector").val() == 'facebook_spending'){
       updateFacebookSpending();
+    }else if($("#file-re-upload-selector").val() == 'transfer'){
+      updateWalletTransfer();
+    }else if($("#file-re-upload-selector").val() == 'gl_revenue'){
+      updateGlCashAdvance();
+    }else if($("#file-re-upload-selector").val() == 'adjust_remain'){
+      updateAdjustRemain();
+    }else if($("#file-re-upload-selector").val() == 'adjust_accounting'){
+      updateAdjustAccounting();
+    }else if($("#file-re-upload-selector").val() == 'adjust_frontend'){
+      updateAdjustFrontEnd();
+    }else if($("#file-re-upload-selector").val() == 'adjustment'){
+      updateAdjustment();
     }
 
   })

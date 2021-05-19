@@ -112,10 +112,10 @@ class ResourcesController extends Controller
         // Find grandadmin_customer_name
         $find_customer_name = $this->resourceModel->findCustomerName("AdwordsCusId", $value["google_id"]);
         if ($find_customer_name["status"] === "success" && !empty($find_customer_name["data"])) {
-          if (empty($find_customer_name["bill_company"])) {
-            $customer_name = iconv('TIS-620','UTF-8',$find_customer_name["bill_firstname"]) . " " . iconv('TIS-620','UTF-8', $find_customer_name["bill_lastname"]);
+          if (empty($find_customer_name["data"]["bill_company"])) {
+            $customer_name = iconv('TIS-620','UTF-8',$find_customer_name["data"]["bill_firstname"]) . " " . iconv('TIS-620','UTF-8', $find_customer_name["data"]["bill_lastname"]);
           } else {
-            $customer_name = iconv('TIS-620','UTF-8',$find_customer_name["bill_company"]);
+            $customer_name = iconv('TIS-620','UTF-8',$find_customer_name["data"]["bill_company"]);
           }
           $value["grandadmin_customer_name"] = $customer_name;
         } else {
@@ -316,7 +316,7 @@ class ResourcesController extends Controller
       foreach ($remaining_budget_customer_id_clear_list as $idx => $value) 
       {
         if($value != NULL){
-          $this->resourceModel->clearGoogleSpendingByID($month, $year,$value["remaining_budget_customer_id"]);
+          $this->resourceModel->clearGoogleSpendingByID($month, $year,$value);
         }
       }
 
@@ -479,10 +479,10 @@ class ResourcesController extends Controller
           // Find grandadmin_customer_name
           $find_customer_name = $this->resourceModel->findCustomerName("facebookID", $fb_spending["facebook_id"]);
           if ($find_customer_name["status"] === "success" && !empty($find_customer_name["data"])) {
-            if (empty($find_customer_name["bill_company"])) {
-              $customer_name = iconv('TIS-620','UTF-8',$find_customer_name["bill_firstname"]) . " " . iconv('TIS-620','UTF-8', $find_customer_name["bill_lastname"]);
+            if (empty($find_customer_name["data"]["bill_company"])) {
+              $customer_name = iconv('TIS-620','UTF-8',$find_customer_name["data"]["bill_firstname"]) . " " . iconv('TIS-620','UTF-8', $find_customer_name["data"]["bill_lastname"]);
             } else {
-              $customer_name = iconv('TIS-620','UTF-8',$find_customer_name["bill_company"]);
+              $customer_name = iconv('TIS-620','UTF-8',$find_customer_name["data"]["bill_company"]);
             }
             $fb_spending["grandadmin_customer_name"] = $customer_name;
           } else {
@@ -685,10 +685,10 @@ class ResourcesController extends Controller
           // Find grandadmin_customer_name
           $find_customer_name = $this->resourceModel->findCustomerName("facebookID", $fb_spending["facebook_id"]);
           if ($find_customer_name["status"] === "success" && !empty($find_customer_name["data"])) {
-            if (empty($find_customer_name["bill_company"])) {
-              $customer_name = iconv('TIS-620','UTF-8',$find_customer_name["bill_firstname"]) . " " . iconv('TIS-620','UTF-8', $find_customer_name["bill_lastname"]);
+            if (empty($find_customer_name["data"]["bill_company"])) {
+              $customer_name = iconv('TIS-620','UTF-8',$find_customer_name["data"]["bill_firstname"]) . " " . iconv('TIS-620','UTF-8', $find_customer_name["data"]["bill_lastname"]);
             } else {
-              $customer_name = iconv('TIS-620','UTF-8',$find_customer_name["bill_company"]);
+              $customer_name = iconv('TIS-620','UTF-8',$find_customer_name["data"]["bill_company"]);
             }
             $fb_spending["grandadmin_customer_name"] = $customer_name;
           } else {
@@ -725,7 +725,7 @@ class ResourcesController extends Controller
         foreach ($remaining_budget_customer_id_clear_list as $idx => $value) 
         {
           if($value != NULL){
-            $this->resourceModel->clearFacebookSpendingByID($month, $year,$value["remaining_budget_customer_id"]);
+            $this->resourceModel->clearFacebookSpendingByID($month, $year,$value);
           }
         }
 
@@ -799,6 +799,7 @@ class ResourcesController extends Controller
         'application/vnd.ms-excel',
         'text/xls',
         'text/xlsx',
+        'text/csv',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       );
 
@@ -812,8 +813,9 @@ class ResourcesController extends Controller
 
       $file_name = $_FILES["transferInputFile"]["name"];
       $targetFilePath = $_FILES["transferInputFile"]["tmp_name"];
-      $month = date("m",strtotime("-1 month"));
-      $year = date("Y",strtotime("-1 month"));
+      $month = $_POST["month"];
+      $year = $_POST["year"];
+      $updated_by = $_POST["updated_by"];
       $wallet_transfers = array();
       $data_index = 0;
       $import_result = array();
@@ -842,13 +844,14 @@ class ResourcesController extends Controller
         foreach ($wallet_transfers as $idx => $wallet_transfer) 
         {
           if ($wallet_transfers[$idx]["source_grandadmin_customer_id"] !== "" && $wallet_transfers[$idx]["source_grandadmin_customer_name"] !== "" && 
-          $wallet_transfers[$idx]["destination_grandadmin_customer_id"] !== "" && $wallet_transfers[$idx]["destination_grandadmin_customer_name"] !== "") {
+          $wallet_transfers[$idx]["destination_grandadmin_customer_id"] !== "" && $wallet_transfers[$idx]["destination_grandadmin_customer_name"] !== "") 
+          {
             $wallet_transfers[$idx]["source_remaining_budget_customer_id"] = $this->getRemainingBudgetCustomerId('grandadmin',$wallet_transfers[$idx]["source_grandadmin_customer_id"],$wallet_transfers[$idx]["source_grandadmin_customer_name"],'wallet_transfer');
             $wallet_transfers[$idx]["destination_remaining_budget_customer_id"] = $this->getRemainingBudgetCustomerId('grandadmin',$wallet_transfers[$idx]["destination_grandadmin_customer_id"],$wallet_transfers[$idx]["destination_grandadmin_customer_name"],'wallet_transfer');
+            $wallet_transfers[$idx]["updated_by"] = $updated_by;
             $insert_wallet_transfer = $this->resourceModel->insertWalletTransfer($month, $year, $wallet_transfers[$idx]);
 
           }
-
         }
       } else {
         $res = array(
@@ -865,6 +868,218 @@ class ResourcesController extends Controller
       echo json_encode($res);
     }
   }
+
+  public function updateWalletTransfer()
+  {
+    header("Content-Type: application/json");
+    if ($_SERVER["REQUEST_METHOD"] === "POST") {
+      $allowedFileType = array(
+        'application/vnd.ms-excel',
+        'text/xls',
+        'text/xlsx',
+        'text/csv',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
+
+      if (!in_array($_FILES["transferInputFile"]["type"], $allowedFileType)) {
+        $res = array(
+          "status" => "fail",
+          "error" => "Not allowed file type"
+        );
+        echo json_encode($res);
+      }
+
+      $file_name = $_FILES["transferInputFile"]["name"];
+      $targetFilePath = $_FILES["transferInputFile"]["tmp_name"];
+      $month = $_POST["month"];
+      $year = $_POST["year"];
+      $updated_by = $_POST["updated_by"];
+      $remaining_budget_customer_id_clear_list = array();
+      $wallet_transfers = array();
+      $data_index = 0;
+      $import_result = array();
+      if (($handle = fopen($targetFilePath, "r")) !== FALSE) {
+        while (!feof($handle)) {
+          $row = fgetcsv($handle);
+          if($data_index != 0){
+            $wallet_transfer = array(
+              "source_grandadmin_customer_id" => $row[0],
+              "source_grandadmin_customer_name" => $row[1],
+              "destination_grandadmin_customer_id" => $row[2],
+              "destination_grandadmin_customer_name" => $row[3],
+              "source_value" => $row[4],
+              "note" => $row[5],
+              "clearing" => $row[6]
+            );
+            array_push($wallet_transfers, $wallet_transfer);
+          }          
+          $data_index++;
+        }
+        fclose($handle);
+
+        $worker_id = $this->reportModel->createUpdateWorker("transfer",$month, $year, $updated_by);
+        $worker_id = $worker_id["data"];
+        $remaining_budget_customer_id_tmp = "";
+        foreach ($wallet_transfers as $idx => $wallet_transfer) 
+        {
+          if ($wallet_transfers[$idx]["source_grandadmin_customer_id"] !== "" && $wallet_transfers[$idx]["source_grandadmin_customer_name"] !== "" && 
+          $wallet_transfers[$idx]["destination_grandadmin_customer_id"] !== "" && $wallet_transfers[$idx]["destination_grandadmin_customer_name"] !== "") {
+            $wallet_transfers[$idx]["source_remaining_budget_customer_id"] = $this->getRemainingBudgetCustomerId('grandadmin',$wallet_transfers[$idx]["source_grandadmin_customer_id"],$wallet_transfers[$idx]["source_grandadmin_customer_name"],'wallet_transfer');
+            $wallet_transfers[$idx]["destination_remaining_budget_customer_id"] = $this->getRemainingBudgetCustomerId('grandadmin',$wallet_transfers[$idx]["destination_grandadmin_customer_id"],$wallet_transfers[$idx]["destination_grandadmin_customer_name"],'wallet_transfer');
+            $remaining_budget_customer_id_tmp = $wallet_transfers[$idx]["source_remaining_budget_customer_id"].",".$wallet_transfers[$idx]["destination_remaining_budget_customer_id"];
+            if(!in_array($remaining_budget_customer_id_tmp,$remaining_budget_customer_id_clear_list)){
+              $remaining_budget_customer_id_clear_list[] = $remaining_budget_customer_id_tmp;
+            }
+          }
+        }
+
+        //check and clear before replace
+        foreach ($remaining_budget_customer_id_clear_list as $idx => $value) 
+        {
+          if($value != NULL){
+            $value = explode(",", $value);
+            $source_remaining_budget_customer_id = $value[0];
+            $destination_remaining_budget_customer_id = $value[1];
+            $this->resourceModel->clearWalletTransferByID($month, $year,$source_remaining_budget_customer_id,$destination_remaining_budget_customer_id);
+          }
+        }
+
+        //add new data
+        foreach ($wallet_transfers as $idx => $value) 
+        {
+          $value["updated_by"] = $updated_by;
+          $insert_wallet_transfer = $this->resourceModel->insertWalletTransfer($month, $year, $value);
+        }
+
+        // update google spending status on report status table
+        $update_status = $this->reportModel->updateReportStatusById($worker_id, "transfer", "waiting");
+        $update_status = $this->reportModel->updateReportStatusById($worker_id, "overall_status", "waiting");
+        $res = array(
+          "status" => "success",
+          "message" => ""
+        );
+        echo json_encode($res);
+        exit;
+        
+      } else {
+        $res = array(
+          "status" => "fail",
+          "error" => "Can not open file"
+        );
+        echo json_encode($res);
+      }
+    } else {
+      $res = array(
+        "status" => "fail",
+        "error" => "Allow only POST method"
+      );
+      echo json_encode($res);
+    }
+  }
+
+  public function updateAdjustment()
+  {
+    header("Content-Type: application/json");
+    if ($_SERVER["REQUEST_METHOD"] === "POST") {
+      $allowedFileType = array(
+        'application/vnd.ms-excel',
+        'text/xls',
+        'text/xlsx',
+        'text/csv',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      );
+
+      if (!in_array($_FILES["AdjustmentInputFile"]["type"], $allowedFileType)) {
+        $res = array(
+          "status" => "fail",
+          "error" => "Not allowed file type"
+        );
+        echo json_encode($res);
+      }
+
+      $file_name = $_FILES["AdjustmentInputFile"]["name"];
+      $targetFilePath = $_FILES["AdjustmentInputFile"]["tmp_name"];
+      $month = $_POST["month"];
+      $year = $_POST["year"];
+      $updated_by = $_POST["updated_by"];
+      $remaining_budget_customer_id_clear_list = array();
+      $adjustments = array();
+      $data_index = 0;
+      $month = $_POST["month"];
+      $year = $_POST["year"];
+      $import_result = array();
+      if (($handle = fopen($targetFilePath, "r")) !== FALSE) {
+        while (!feof($handle)) {
+          $row = fgetcsv($handle);
+          if($data_index != 0 && $row[0] != ""){
+            $adjustment = array(
+              "report_id" => $row[0],
+              "parent_id" => $row[1],
+              "grandadmin_customer_id" => $row[2],
+              "grandadmin_customer_name" => $row[3],
+              "offset_acct" => $row[4],
+              "offset_acct_name" => $row[5],
+              "adjustment_remain" => $row[6],
+              "adjustment_remain_note" => $row[7],
+              "adjustment_free_click_cost" => $row[8],
+              "adjustment_free_click_cost_note" => $row[9],
+              "adjustment_free_click_cost_old" => $row[10],
+              "adjustment_free_click_cost_old_note" => $row[11],
+              "adjustment_cash_advance" => $row[12],
+              "adjustment_cash_advance_note" => $row[13],
+              "adjustment_max" => $row[14],
+              "adjustment_max_note" => $row[15],
+              "adjustment_front_end" => $row[16],
+              "adjustment_front_end_note" => $row[17]
+            );
+            array_push($adjustments, $adjustment);
+          }          
+          $data_index++;
+        }
+        fclose($handle);
+
+        
+        foreach ($adjustments as $idx => $adjustment) 
+        {
+          
+          $update_adjustment = $this->resourceModel->updateAdjustment($month,$year,$adjustment);
+          $re_calculate = $this->reCalculate($adjustment["report_id"]);
+          
+        }
+
+        $res = array(
+          "status" => "success",
+          "message" => ""
+        );
+        echo json_encode($res);
+        exit;
+        
+      } else {
+        $res = array(
+          "status" => "fail",
+          "error" => "Can not open file"
+        );
+        echo json_encode($res);
+      }
+    } else {
+      $res = array(
+        "status" => "fail",
+        "error" => "Allow only POST method"
+      );
+      echo json_encode($res);
+    }
+  }
+
+  private function reCalculate($report_id)
+  {
+    $reconcile_data = $this->reportModel->getReconcileDataByReportId($report_id);
+    $reconcile_data = $reconcile_data["data"];
+    $cash_advance = $reconcile_data['last_month_remaining'] + $reconcile_data['adjustment_remain'] + $reconcile_data['receive'] + $reconcile_data['invoice'] + $reconcile_data['transfer'] + $reconcile_data['ads_credit_note'] + $reconcile_data['spending_invoice'] + $reconcile_data['adjustment_free_click_cost'] + $reconcile_data['adjustment_free_click_cost_old'] + $reconcile_data['adjustment_cash_advance'] + $reconcile_data['adjustment_max'];
+    $remaining_budget = $reconcile_data['remaining_ice'] + $reconcile_data['wallet'] + $reconcile_data['wallet_free_click_cost'] + $reconcile_data['withholding_tax'] + $reconcile_data['adjustment_front_end'];
+    $difference = $remaining_budget - $cash_advance;
+
+    $reconcile_data = $this->reportModel->updateReconcileReCalculateByReportId($report_id, $cash_advance, $remaining_budget, $difference);
+  }
   
   // Get report status
   public function getStatusResources($year = "", $month = "")
@@ -876,15 +1091,6 @@ class ResourcesController extends Controller
         $result = array(
           "status" => "error",
           "message" => "Required month and year to get status resource"
-        );
-        echo json_encode($result);
-        exit;
-      }
-
-      if (intval($month + $year) > intval($this->month + $this->year)) {
-        $result = array(
-          "status" => "error",
-          "message" => "These month and year input are more than current month and year"
         );
         echo json_encode($result);
         exit;

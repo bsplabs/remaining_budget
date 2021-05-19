@@ -348,6 +348,24 @@ class Customer
     return $result;
   }
 
+  public function checkMainBusiness($parent_id)
+  {
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "SELECT id FROM remaining_budget_customers WHERE parent_id = :parent_id AND main_business = 1";
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("parent_id", $parent_id);
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+      $result["status"] = "error";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
 }
 
 ?>

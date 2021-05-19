@@ -631,4 +631,42 @@ class CustomersController extends Controller
       echo json_encode($res);
     }
   }
+
+  public function checkMainBusiness($parent_id = "")
+  {
+    header("Content-Type: application/json", true);
+    if ($_SERVER['REQUEST_METHOD'] == 'GET') {
+      if (empty($parent_id)) {
+        $res = array(
+          "status" => "error",
+          "message" => "Require parent id"
+        );
+        echo json_encode($res);
+        exit;
+      }
+
+      $check_main_business = $this->customerModel->checkMainBusiness($parent_id);
+      
+      $id = "";
+      if ($check_main_business['status'] === 'success' && !empty($check_main_business['data']['id'])) {
+        $id = $check_main_business['data']['id'];
+      }
+
+      $res = array(
+        "status" => "success",
+        "data" => $id,
+        "message" => ""
+      );
+      echo json_encode($res);
+      exit;
+
+    } else {
+      $res = array(
+        "status" => "error",
+        "message" => "Allow only GET method"
+      );
+      echo json_encode($res);
+      exit;
+    }
+  }
 }

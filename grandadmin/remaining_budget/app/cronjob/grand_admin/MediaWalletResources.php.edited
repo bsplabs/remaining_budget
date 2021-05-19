@@ -322,7 +322,7 @@ class MediaWalletResources
 
   
 
-  function clearMediaWalletByMonthYear()
+  function clearMediaWalletByMonthYear($month, $year)
   {
     try {
       $mainDB = $this->db->dbCon();
@@ -348,14 +348,16 @@ class MediaWalletResources
   public function run()
   {
 
+    // echo "\n ######################################## \n";
+    $last_month_timestamp =  strtotime("-1 month");
+    $primary_month = date("m", $last_month_timestamp);
+    $primary_year = date("Y", $last_month_timestamp);
+
     $get_month_year = $this->getMonthYearFromReportStatusTable();
 
     foreach ($get_month_year["data"] as $key => $val) 
     {
       $get_media_wallet = $this->getMediaWallet($val["month"], $val["year"]);
-      // echo $val["month"] . " - " . $val["year"] . " --------------------------------------------------> \n";
-      // echo "Founded: " . count($get_media_wallet["data"]) . " rows \n";
-      // echo "\n";
 
       if (empty($get_media_wallet["data"])) continue;
 
