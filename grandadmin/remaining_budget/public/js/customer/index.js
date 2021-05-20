@@ -1,9 +1,11 @@
 var current_row = "";
 var current_id_selected = '';
 
+var customer_table;
+
 $(document).ready(function () {
 
-  var customer_table = $("#customers-table").DataTable({
+  customer_table = $("#customers-table").DataTable({
     processing: true,
     serverSide: true,
     ordering: true,
@@ -185,32 +187,48 @@ $(document).ready(function () {
       main_business: $("#inputMainBusiness").is(":checked"),
     };
 
-    $.ajax({
-      url: base_url + "/customers/edit-customer",
-      type: "POST",
-      data: JSON.stringify(data),
-      processData: false,
-      contentType: "application/json",
-      success: function (res) {
-        // console.log(res);
-        $("#modal-edit-customer").modal("toggle");
-        if (res.status == "success") {
-          customer_table.ajax.reload(function () {
+    if (data.main_business) {
+      $.ajax({
+        url: base_url + '/customers/check-main-business/' + data.parent_id,
+        type: 'get',
+        processData: false,
+        contentType: false,
+        success: function(res) {
+          if (res.status === 'success') {
+            if (res.data != '' && res.data != data.id) {
+              $("#modal-edit-customer").modal("hide");
+              Swal.fire({
+                icon: "warning",
+                title: 'Do you want to save the changes ?',
+                text: 'เนื่องจากมีการตั้งค่า Main business ให้กับ customer อื่น ที่อยู่ภายใต้ Parent ID เดียวกัน',
+                showCancelButton: true,
+                confirmButtonText: 'Continue to save',
+              }).then((result) => {
+                if (result.isConfirmed) {
+                  // call ajax save customer edit
+                  saveCustomerEdited(data);
+                }
+              })
+            } else {
+              saveCustomerEdited(data);
+            }
+          } else {
             Swal.fire({
-              icon: "success",
-              title: "Successfully Updated",
-              text: "",
+              icon: "error",
+              title: "Oops...",
+              text: res.message,
             });
-          }, false);
-        } else {
-          Swal.fire({
-            icon: "error",
-            title: "Oops...",
-            text: res.message,
-          });
+          }
         }
-      }
-    });
+      });  
+    } else {
+      saveCustomerEdited(data);
+    }
+ 
+    /*
+
+    */
+
   });
 
   $('#importCustomers').click(function() {
@@ -317,3 +335,31 @@ $(document).ready(function () {
   });
 
 });
+
+function saveCustomerEdited(data) {
+  $.ajax({
+    url: base_url + "/customers/edit-customer",
+    type: "POST",
+    data: JSON.stringify(data),
+    processData: false,
+    contentType: "application/json",
+    success: function (res) {
+      $("#modal-edit-customer").modal("hide");
+      if (res.status == "success") {
+        customer_table.ajax.reload(function () {
+          Swal.fire({
+            icon: "success",
+            title: "Successfully Updated",
+            text: "",
+          });
+        }, false);
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Oops...",
+          text: res.message,
+        });
+      }
+    }
+  });
+}

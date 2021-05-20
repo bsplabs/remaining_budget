@@ -215,9 +215,10 @@ var is_closed = "<?php echo $data["is_closed"];?>";
                   <option value="google_spending">Google Spending</option>
                   <option value="facebook_spending">FaceBook Spending</option>
                   <option value="transfer">Transfer</option>
-                  <option value="adjust_begining">Adjust ยอดยกมา</option>
+                  <option value="adjustment">Adjustment</option>
+                  <!-- <option value="adjust_remain">Adjust ยอดยกมา</option>
                   <option value="adjust_accounting">Adjust Accounting</option>
-                  <option value="adjust_frontend">Adjust Other System</option>
+                  <option value="adjust_frontend">Adjust Other System</option> -->
                   <option value="apis">APIs</option>
                 </select>
               
@@ -358,6 +359,18 @@ var is_closed = "<?php echo $data["is_closed"];?>";
       <span class="sr-only">Loading...</span>
     </div>
   </div>
+  <div class="position-fixed bottom-0 right-0 p-3" style="z-index: 5; right: 0; bottom: 0;">
+  <div id="liveToast" class="toast hide" role="alert" aria-live="assertive" aria-atomic="true" data-delay="2000">
+    <div class="toast-header">
+      <strong id="toast_header" class="mr-auto"></strong>
+      <button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close">
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </div>
+    <div id="toast_body" class="toast-body">
+    </div>
+  </div>
+</div>
 
 
 <?php require_once APPROOT . "/views/layout/script.php"; ?>

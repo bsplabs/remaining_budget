@@ -54,8 +54,8 @@
       <!--  -->
       <!--  -->
       <div class="text-center">
-        <button style="margin:10px 5px;" id="apply_filter" class="btn btn-add btn-sm pull-right"><i class='bx bx-filter-alt'></i>Apply</button>
         <button style="margin:10px 5px;" id="reset_filter" class="btn btn-tools btn-sm pull-right"><i class='bx bx-reset' ></i>Reset</button>
+        <button style="margin:10px 5px;" id="apply_filter" class="btn btn-add btn-sm pull-right"><i class='bx bx-filter-alt'></i>Apply</button>
       </div>
       <!--  -->
       </div>

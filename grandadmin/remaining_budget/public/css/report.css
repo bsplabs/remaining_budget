@@ -24,13 +24,13 @@
 }
 
 .resource-box {
-  height: 20rem !important;
+  height: 15rem !important;
 }
 
 .upload-transfer-file-ready,
 .upload-transfer-file-fail,
 .upload-gl-revenue-file-ready {
-  font-size: 10rem;
+  font-size: 5rem;
 }
 .upload-transfer-file-ready,
 .upload-gl-revenue-file-ready {
@@ -43,7 +43,7 @@
 .resource-box__icon,
 .resource-box__icon,
 .resource-box__icon {
-  font-size: 10rem;
+  font-size: 5rem;
 }
 .resource-box__icon .processing {
   color: #FDD65E;

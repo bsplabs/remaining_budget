@@ -557,6 +557,25 @@ class Report
     return $result;
   }
 
+  public function getDefaultReportStatusByMonthYear($month, $year)
+  {
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "SELECT * FROM remaining_budget_report_status WHERE type = 'default' AND month = :month AND year = :year limit 1";
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("month", $month);
+      $stmt->bindParam("year", $year);
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
   public function createReportStatus($month, $year)
   {
     try {
@@ -909,6 +928,26 @@ class Report
       $result["status"] = "success";
       $result["data"] = "";
 
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+  public function clearGlCashAdvanceByID($month, $year, $remaining_budget_customer_id)
+  {
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "DELETE FROM remaining_budget_gl_cash_advance WHERE month = :month AND year = :year AND remaining_budget_customer_id = :remaining_budget_customer_id";
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("month", $month);
+      $stmt->bindParam("year", $year);
+      $stmt->bindParam("remaining_budget_customer_id", $remaining_budget_customer_id);
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = "";
     } catch (PDOException $e) {
       $result["status"] = "fail";
       $result["data"] = $e->getMessage();

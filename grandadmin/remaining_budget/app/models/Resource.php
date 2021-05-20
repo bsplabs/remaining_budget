@@ -531,7 +531,7 @@ class Resource
       $stmt->bindParam("source_value", $this->floatvalue($wallet_transfer["source_value"]));
       $stmt->bindParam("note", $wallet_transfer["note"]);
       $stmt->bindParam("clearing", $wallet_transfer["clearing"]);
-      $stmt->bindValue("updated_by", 'kittisak');
+      $stmt->bindValue("updated_by", $wallet_transfer["updated_by"]);
 
       $stmt->execute();
       $result["status"] = "success";
@@ -635,6 +635,79 @@ class Resource
       $result = $mainDB->lastInsertId();
     } catch (PDOException $e) {
       $result = "";
+    }
+
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+
+  public function clearWalletTransferByID($month, $year, $source_remaining_budget_customer_id,$destination_remaining_budget_customer_id)
+  {
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "DELETE FROM remaining_budget_wallet_transfer WHERE month = :month AND year = :year AND source_remaining_budget_customer_id = :source_remaining_budget_customer_id AND destination_remaining_budget_customer_id = :destination_remaining_budget_customer_id";
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("month", $month);
+      $stmt->bindParam("year", $year);
+      $stmt->bindParam("source_remaining_budget_customer_id", $source_remaining_budget_customer_id);
+      $stmt->bindParam("destination_remaining_budget_customer_id", $destination_remaining_budget_customer_id);
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = "";
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+  public function updateAdjustment($month,$year, $adjustment){
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "UPDATE remaining_budget_report
+              SET adjustment_remain = :adjustment_remain,
+              adjustment_remain_note = :adjustment_remain_note,
+              adjustment_free_click_cost = :adjustment_free_click_cost,
+              adjustment_free_click_cost_note = :adjustment_free_click_cost_note,
+              adjustment_free_click_cost_old = :adjustment_free_click_cost_old,
+              adjustment_free_click_cost_old_note = :adjustment_free_click_cost_old_note,
+              adjustment_cash_advance = :adjustment_cash_advance,
+              adjustment_cash_advance_note = :adjustment_cash_advance_note,
+              adjustment_max = :adjustment_max,
+              adjustment_max_note = :adjustment_max_note,
+              adjustment_front_end = :adjustment_front_end,
+              adjustment_front_end_note = :adjustment_front_end_note
+              WHERE month = :month
+                AND year = :year
+                AND id = :report_id
+             ";
+
+      $stmt = $mainDB->prepare($sql);
+
+      // Where cause
+      $stmt->bindParam("month", $month);
+      $stmt->bindParam("year", $year);
+      $stmt->bindParam("report_id", $adjustment["report_id"]);
+      $stmt->bindParam("adjustment_remain", $adjustment["adjustment_remain"]);
+      $stmt->bindParam("adjustment_remain_note", $adjustment["adjustment_remain_note"]);
+      $stmt->bindParam("adjustment_free_click_cost", $adjustment["adjustment_free_click_cost"]);
+      $stmt->bindParam("adjustment_free_click_cost_note", $adjustment["adjustment_free_click_cost_note"]);
+      $stmt->bindParam("adjustment_free_click_cost_old", $adjustment["adjustment_free_click_cost_old"]);
+      $stmt->bindParam("adjustment_free_click_cost_old_note", $adjustment["adjustment_free_click_cost_old_note"]);
+      $stmt->bindParam("adjustment_cash_advance", $adjustment["adjustment_cash_advance"]);
+      $stmt->bindParam("adjustment_cash_advance_note", $adjustment["adjustment_cash_advance_note"]);
+      $stmt->bindParam("adjustment_max", $adjustment["adjustment_max"]);
+      $stmt->bindParam("adjustment_max_note", $adjustment["adjustment_max_note"]);
+      $stmt->bindParam("adjustment_front_end", $adjustment["adjustment_front_end"]);
+      $stmt->bindParam("adjustment_front_end_note", $adjustment["adjustment_front_end_note"]);
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = "";
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
     }
 
     $this->db->dbClose($mainDB);
