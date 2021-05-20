@@ -1,5 +1,6 @@
 body {
   font-size: var(--normal-font-size);
+  font-size: 14px;
 }
 
 .hide {

@@ -1,5 +1,11 @@
 FROM orsolin/docker-php-5.3-apache:latest
 
+RUN apt-get update && apt-get install libzip-dev -y
+RUN pecl install zip-1.14.0.tar
+RUN docker-php-ext-configure zip --with-libzip
+
+COPY ./php/php.ini /etc/php5/apache2/
+
 # RUN apt-get update && apt-get install libzip-dev curl php5-curl -y --force-yes
 # RUN pecl install zip-1.14.0.tar
 # RUN cp /usr/lib/php5/20131226/curl.so /usr/local/lib/php/extensions/no-debug-non-zts-20090626/

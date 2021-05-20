@@ -191,7 +191,7 @@ class ResourcesController extends Controller
       echo json_encode($response);
       exit;
     }
-
+    
   }
 
   public function updateGoogleSpending()

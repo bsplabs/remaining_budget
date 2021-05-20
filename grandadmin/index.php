@@ -3,7 +3,7 @@
 
 date_default_timezone_set('Asia/Bangkok');
 
-echo 1133/100;
+phpinfo();
 
 // $sttime = strtotime("1/4/2021");
 // echo $sttime;
