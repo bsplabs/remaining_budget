@@ -80,7 +80,7 @@ class RemainingICE
     $primary_year = PRIMARY_YEAR;
     $limit = 100;
 
-    // $get_month_year = $this->getMonthYearFromReportStatusTable();
+    $get_month_year = $this->getMonthYearFromReportStatusTable();
     if (empty($get_month_year["data"])) {
       $this->createReportStatus($primary_month, $primary_year);
       $get_month_year["data"][0] = array(

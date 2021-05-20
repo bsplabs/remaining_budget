@@ -1,6 +1,7 @@
 <!-- Second CSS -->
 <link href="<?php echo BASE_URL; ?>/public/vendors/datatables/datatables.min.css" rel="stylesheet">
 <!-- <link href="<?php echo BASE_URL; ?>/public/vendors/datatables/DataTables-1.10.24/dataTables.bootstrap4.min.css" rel="stylesheet"> -->
+<link rel='stylesheet' href="<?php echo BASE_URL; ?>/public/css/main.css"> 
 <link href="<?php echo BASE_URL; ?>/public/css/customer.css" rel="stylesheet">
 
 <?php require_once APPROOT . "/views/layout/head.php"; ?>
@@ -14,7 +15,7 @@
   <br>
   <div class="row">
     <div class="col-md-6">
-      <h2>Customers Management</h2>
+      <h3>Customers Management</h3>
       <!-- <p class="mb-0">This page show you all customers and you could upload customer resources file to edit customers</p> -->
     </div>
     <!-- <div class="col-md-6 text-right">
@@ -66,8 +67,6 @@
       <button type="button" class="btn btn-export" style="margin-left: 5px;" id="exportCustomers"><i class='bx bx-export'></i> Export</button>
     </div>
   </div>
-
-  <hr>
 
   <table id="customers-table" class="table table-bordered table- text-nowrap table-striped table-hover">
     <!-- THEAD -->
@@ -263,6 +262,34 @@
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
           <button type="button" class="btn btn-primary" id="saveCustomerEdited">Save</button>
+        </div>
+        <!--  -->
+      </div>
+    </div>
+  </div>
+  <div class="modal fade" id="modalDuplicateCustomerMainBusiness" tabindex="-1" aria-labelledby="modalDuplicateCustomerMainBusinessLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+      <div class="modal-content">
+        <!-- header  -->
+        <div class="modal-header">
+          <h5 class="modal-title">Warning! Do you want to save the changes ?</h5>
+        </div>
+        <!-- body -->
+        <div class="modal-body">
+          <p>เนื่องจากมีการตั้งค่า Main business ให้กับ Customer อื่น ที่อยู่ภายใต้ Parent ID เดียวกัน</p>
+          <span class="mb-2">Customer ที่มีการตั้งค่า Main Business</span>
+          <ul>
+            <li>ID: <span id="duplicateId"></span></li>
+            <li>Customer Name: <span id="duplicateCustomerName"></span></li>
+          </ul>
+        </div>
+        <!-- footer -->
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-primary d-flex align-items-center" id="continueToSaveDuplicateButton">
+            <span class="spinner-button spinner-border spinner-border-sm hide" role="status" aria-hidden="true"></span>
+            <span>Continue to save</span>
+          </button>
         </div>
         <!--  -->
       </div>

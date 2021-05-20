@@ -647,14 +647,14 @@ class CustomersController extends Controller
 
       $check_main_business = $this->customerModel->checkMainBusiness($parent_id);
       
-      $id = "";
-      if ($check_main_business['status'] === 'success' && !empty($check_main_business['data']['id'])) {
-        $id = $check_main_business['data']['id'];
+      $customer_data = "";
+      if ($check_main_business['status'] === 'success' && !empty($check_main_business['data'])) {
+        $customer_data = $check_main_business['data'];
       }
 
       $res = array(
         "status" => "success",
-        "data" => $id,
+        "data" => $customer_data,
         "message" => ""
       );
       echo json_encode($res);

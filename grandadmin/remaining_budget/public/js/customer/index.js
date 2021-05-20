@@ -22,12 +22,10 @@ $(document).ready(function () {
       url: base_url + "/customers/get-customers",
       type: 'POST',
       data: function(d) {
-        filters: {
-          d.action_type = 'get_data',
-          d.filters = {
-            filter_parent_id: $('#filterParentId').val(),
-            filter_payment: $('#filterPaymentMethod').val()
-          }
+        d.action_type = 'get_data',
+        d.filters = {
+          filter_parent_id: $('#filterParentId').val(),
+          filter_payment: $('#filterPaymentMethod').val()
         }
       }
     },
@@ -73,17 +71,15 @@ $(document).ready(function () {
           if (true) {
             return (
               "<div class='d-flex justify-content-center'>" +
-              "<div class='col-6'>" +
-              "<i class='bx bxs-edit edit-customer' data-customer-id='" +
-              data +
-              "' style='cursor: pointer;'></i>" +
-              "</div>" +
-              "<div class='col-6'>" +
-              "<i class='bx bx-trash text-danger delete-customer' data-customer-id='" +
-              data +
-              "' style='cursor: pointer;'></i>" +
-              "</div>" +
-              "</div>"
+              "<div class='col-12'>" +
+              "<i class='bx bxs-edit edit-customer' data-customer-id='" + data + "' style='cursor: pointer;font-size: 16px;'></i>" +
+              "</div>" //+
+              // "<div class='col-6'>" +
+              // "<i class='bx bx-trash text-danger delete-customer' data-customer-id='" +
+              // data +
+              // "' style='cursor: pointer;'></i>" +
+              // "</div>" +
+              // "</div>"
             );
           }
 
@@ -195,20 +191,11 @@ $(document).ready(function () {
         contentType: false,
         success: function(res) {
           if (res.status === 'success') {
-            if (res.data != '' && res.data != data.id) {
+            if (res.data.id != '' && res.data != data.id) {
               $("#modal-edit-customer").modal("hide");
-              Swal.fire({
-                icon: "warning",
-                title: 'Do you want to save the changes ?',
-                text: 'เนื่องจากมีการตั้งค่า Main business ให้กับ customer อื่น ที่อยู่ภายใต้ Parent ID เดียวกัน',
-                showCancelButton: true,
-                confirmButtonText: 'Continue to save',
-              }).then((result) => {
-                if (result.isConfirmed) {
-                  // call ajax save customer edit
-                  saveCustomerEdited(data);
-                }
-              })
+              $('#duplicateId').text(res.data.id);
+              $('#duplicateCustomerName').text(res.data.grandadmin_customer_name);
+              $('#modalDuplicateCustomerMainBusiness').modal('show');
             } else {
               saveCustomerEdited(data);
             }
@@ -229,6 +216,22 @@ $(document).ready(function () {
 
     */
 
+  });
+
+  $('#continueToSaveDuplicateButton').click(function() {
+    $('#continueToSaveDuplicateButton .spinner-button').removeClass('hide');
+    var data = {
+      id: $("#inputID").val(),
+      parent_id: $("#inputParentID").val(),
+      grandadmin_customer_id: $("#inputCustomerID").val(),
+      grandadmin_customer_name: $("#inputCustomerName").val(),
+      offset_acct: $("#inputOffsetAcct").val(),
+      offset_acct_name: $("#inputOffsetAcctName").val(),
+      company: $("#inputCompany").val(),
+      payment_method: $("#inputPaymentMethod").val(),
+      main_business: $("#inputMainBusiness").is(":checked"),
+    };
+    saveCustomerEdited(data);
   });
 
   $('#importCustomers').click(function() {
@@ -345,6 +348,8 @@ function saveCustomerEdited(data) {
     contentType: "application/json",
     success: function (res) {
       $("#modal-edit-customer").modal("hide");
+      $('#modalDuplicateCustomerMainBusiness').modal('hide');
+      $('#continueToSaveDuplicateButton .spinner-button').removeClass('hide').addClass('hide');
       if (res.status == "success") {
         customer_table.ajax.reload(function () {
           Swal.fire({

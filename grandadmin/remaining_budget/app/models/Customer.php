@@ -352,7 +352,7 @@ class Customer
   {
     try {
       $mainDB = $this->db->dbCon();
-      $sql = "SELECT id FROM remaining_budget_customers WHERE parent_id = :parent_id AND main_business = 1";
+      $sql = "SELECT * FROM remaining_budget_customers WHERE parent_id = :parent_id AND main_business = 1";
       $stmt = $mainDB->prepare($sql);
       $stmt->bindParam("parent_id", $parent_id);
       $stmt->execute();
