@@ -3,7 +3,7 @@
 
 date_default_timezone_set('Asia/Bangkok');
 
-phpinfo();
+echo date('Y-m', strtotime('2021-01-01' . ' - 1 month'));
 
 // $sttime = strtotime("1/4/2021");
 // echo $sttime;
