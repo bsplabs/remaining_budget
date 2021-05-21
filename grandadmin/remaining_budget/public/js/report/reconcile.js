@@ -2,6 +2,8 @@ var datatable;
 var is_loaded_data = false;
 var is_loaded_child_data = false;
 
+var edit_note_row_selected = '';
+
 function getReconcileDate(){
   var data_amount = 0;
   $.ajax({
@@ -147,7 +149,7 @@ function appendReconcileRow(value,is_child){
     `<td class="text-right">`+currencyFormat(value.remaining_budget)+`</td>
     
     <td class="text-right">`+currencyFormat(value.difference)+`</td>
-    <td>`+stringNullToDash(value.note)+`</td>
+    <td class="reconcile-note" data-reconcile-id="` + value.report_id + `">`+stringNullToDash(value.note)+`</td>
     </tr>`
   $("#reconcile_content").append(html);
 }
@@ -492,6 +494,81 @@ $( document ).ready(function() {
   $(document).on('click','.expand-able', function(event){
     $(".expand-able-child-"+$(this).data('parent_id')).toggle();
   })
+
+  $(document).on('click', '.reconcile-note', function(event) {
+    var tr = $(this).parent();
+    var reconcile_data = datatable.row(tr).data();
+    edit_note_row_selected = tr;
+    $('#reconcileId').val($(this).attr('data-reconcile-id'));
+    $('#customerIdEditNote').text(reconcile_data[1]);
+    $('#customerNameEditNote').text(reconcile_data[2]);
+    if (reconcile_data[26] == '-' || reconcile_data[26].trim() == '') {
+      $('#editReconcileNote').text('');
+    } else {
+      $('#editReconcileNote').text(reconcile_data[26]);
+    }
+    $('#updateReconcileNoteModal').modal('show');
+  });
+
+  $('#editReconcileNoteBtnSubmit').click(function() {
+    $('#editReconcileNoteBtnSubmit .spinner-button').removeClass('hide');
+    var reconcile_id = $('#reconcileId').val()
+    if (reconcile_id == '' || reconcile_id == false) {
+      $('#updateReconcileNoteModal').modal('hide');
+      Swal.fire({
+        icon: "error",
+        title: "Oops...",
+        text: "Require reconcile id",
+      });
+      return 0;
+    } 
+
+    var reconcile_note = $('#editReconcileNote').val()
+    
+    var data = {
+      id: reconcile_id,
+      note: reconcile_note
+    }
+
+    $.ajax({
+      url: base_url + '/reports/update-reconcile-note',
+      type: 'POST',
+      data: JSON.stringify(data),
+      processData: false,
+      contentType: false,
+      success: function(res) {
+        $('#updateReconcileNoteModal').modal('hide');
+        $('#editReconcileNoteBtnSubmit .spinner-button').removeClass('hide').addClass('hide');
+        if (res.status === 'success') {
+          Swal.fire({
+            position: 'top-end',
+            icon: 'success',
+            title: 'Successfully updated',
+            showConfirmButton: false,
+            timer: 1500
+          })
+
+          var reconcile_data = datatable.row(edit_note_row_selected).data();
+          if (data.note.trim() == '' || data.note == false) {
+            reconcile_data[26] = '-';
+          } else {
+            reconcile_data[26] = data.note;
+          }
+          datatable.row(edit_note_row_selected).data(reconcile_data);
+
+        } else {
+          Swal.fire({
+            position: 'top-end',
+            icon: 'error',
+            title: res.message,
+            showConfirmButton: false,
+            timer: 1500
+          })
+        }
+      }
+    });
+
+  });
 
   //  Month and year drop-down change
   $('#month-year-selector').change(function() {

@@ -300,6 +300,35 @@ var is_closed = "<?php echo $data["is_closed"];?>";
     </div>
   </div>
 
+  <!-- Edit reconcile note modal -->
+  <div class="modal fade" tabindex="-1" id="updateReconcileNoteModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header" style="display:block;">
+        <h5 class="modal-title">Edit Reconcile Note</h5>
+        <ul class="m-0 mt-2">
+          <li>Customer ID: <span id="customerIdEditNote"></span></li>
+          <li>Customer Name: <span id="customerNameEditNote"></span></li>
+        </ul>
+      </div>
+      
+      <div class="modal-body">
+        <input type="hidden" name="id" value="" id="reconcileId">
+        <div class="form-group">
+          <label for="edit_able_note">Note</label>
+          <textarea class="form-control" id="editReconcileNote" rows="3"></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary d-flex align-items-center" id="editReconcileNoteBtnSubmit">
+          <span class="spinner-button spinner-border spinner-border-sm hide" role="status" aria-hidden="true"></span>
+          <span class="text-button ml-2">Save changes</span>
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="modal" tabindex="-1" id="AdjustModal">
@@ -322,7 +351,7 @@ var is_closed = "<?php echo $data["is_closed"];?>";
       </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
         <button type="button" class="btn btn-primary" id="edit_able_submit">Save changes</button>
       </div>
     </div>

@@ -895,6 +895,53 @@ class ReportsController extends Controller
     exit;
   }
 
+  public function updateReconcileNote()
+  {
+    header("Content-Type: application/json", true);
+    if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+      if ( $_SERVER['REQUEST_METHOD'] == 'POST' && empty($_POST) ) {
+        $_POST = json_decode(file_get_contents('php://input'), true);
+      }
+
+      $report_id = $_POST['id'];
+      $report_note = $_POST['note'];
+
+      if (empty($report_id)) {
+        $res = array(
+          "status" => "error",
+          "message" => "Require report id"
+        );
+        echo json_encode($res);
+        exit;
+      }
+
+      $update_note = $this->reportModel->updateReportNote($report_id, $report_note);
+      if ($update_note['status'] === 'success') {
+        $res = array(
+          "status" => "success",
+          "message" => ""
+        );
+        echo json_encode($res);
+        exit;
+      } else {
+        $res = array(
+          "status" => "error",
+          "message" => "Update report note failed"
+        );
+        echo json_encode($res);
+        exit;
+      }
+
+    } else {
+      $res = array(
+        "status" => "error",
+        "message" => "allow only POST method"
+      );
+      echo json_encode($res);
+      exit;
+    }
+  }
+
   function parseMonthYear($month, $year)
   {
     $date_obj = DateTime::createFromFormat("!m", $month);

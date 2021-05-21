@@ -955,4 +955,25 @@ class Report
     $this->db->dbClose($mainDB);
     return $result;
   }
+
+  public function updateReportNote($report_id, $report_note)
+  {
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "UPDATE remaining_budget_report 
+              SET note = :note
+              WHERE id = :report_id;";
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("note", $report_note);
+      $stmt->bindParam("report_id", $report_id);
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = "";
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
 }
