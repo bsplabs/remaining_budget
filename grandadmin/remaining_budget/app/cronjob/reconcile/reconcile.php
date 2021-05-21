@@ -8,14 +8,12 @@ class Reconcile
 
   public function __construct()
   {
-    echo "Reconcile is working...\n\n";
     $this->db = new Database();
   }
 
   public function run()
   {
     $reconcile_data_list = $this->getReconcileJob();
-    print_r($reconcile_data_list);
     $reconcile_data_list = $reconcile_data_list["data"];
     
     foreach($reconcile_data_list as $reconcile_data){
@@ -31,7 +29,7 @@ class Reconcile
   private function getReconcileJob(){
     try {
       $mainDB = $this->db->dbCon();
-      $sql = "SELECT * FROM remaining_budget_report r  WHERE is_reconcile = 0";
+      $sql = "SELECT * FROM remaining_budget_report r  WHERE is_reconcile = false";
       $stmt = $mainDB->prepare($sql);
       $stmt->execute();
       $result["status"] = "success";

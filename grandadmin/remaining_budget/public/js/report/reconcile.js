@@ -162,6 +162,12 @@ function renderDataTables(){
     "searching": true,
     "pageLength": 100
   }); 
+
+  $(".edit-able").hover(function(event){
+    $(this).append("<i class='bx bx-pencil'></i>");
+  }, function() {
+    $(this).children('.bx-pencil').remove();
+  });
   
   $(".loader-overlay").hide()
   $.fn.dataTable.ext.search.push(
@@ -723,9 +729,5 @@ $( document ).ready(function() {
     closePeriod();
   })
 
-  $(".more-note-td").hover(function(event){
-    // $(".more-note-td").tooltip()
-    console.log('---------')
-  })
 });
 
