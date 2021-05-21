@@ -45,6 +45,11 @@ CREATE TABLE `remaining_budget_customers` (
   PRIMARY KEY (`id`)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+ALTER TABLE `remaining_budget`.`remaining_budget_customers` 
+ADD INDEX `grand_customer_id` (`grandadmin_customer_id` ASC, `grandadmin_customer_name` ASC),
+ADD INDEX `offset_acct` (`offset_acct` ASC, `offset_acct_name` ASC);
+
+
 CREATE TABLE `remaining_budget_report` (
   `id` INT NOT NULL AUTO_INCREMENT,
   `remaining_budget_customer_id` INT NOT NULL,

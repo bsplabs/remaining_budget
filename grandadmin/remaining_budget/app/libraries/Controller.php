@@ -51,7 +51,7 @@ class Controller
       $remaining_budget_customer_id = $resource_model->isRemainingBudgetByOffsetData($id,$name);
     }
 
-    if($check_remaining_budget_customer_id == NULL){
+    if($remaining_budget_customer_id == NULL){
       $remaining_budget_customer_id = $resource_model->createRemainingBudgetCustomerId($id,$name,$source);
     }
 

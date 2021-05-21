@@ -152,10 +152,10 @@ $(document).ready(function() {
 
   $('#upload_transfer_file_form').submit(function(event) {
     event.preventDefault();
-    console.log($(this))
     var formData = new FormData($(this)[0]);
-    console.log('Upload wallet transfer');
-    console.log(formData);
+    formData.append("month", month);
+    formData.append("year", year);
+    formData.append("updated_by", 'kittisak');
 
     $.ajax({
       url: base_url + '/resources/import_wallet_transfer',
@@ -163,8 +163,13 @@ $(document).ready(function() {
       data: formData,
       processData: false,
       contentType: false,
-      success:function(data) {
-        console.log(data);
+      success:function(res) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Successfully import',
+          text: ''
+        })
+        resourceImportBoxChangeState('.transfer', 'waiting', res.data.import_total + " rows", res.data.updated_at);
       }
     });
   });
@@ -182,7 +187,18 @@ $(document).ready(function() {
   $('.re-upload-file').click(function() {
     var parent = $(this).parent().parent().parent();
     var parent_class = parent[0].className.split(" ");
-    resourceImportBoxChangeState('.' + parent_class[parent_class.length - 1], 'pending')
+    // resourceImportBoxChangeState('.' + parent_class[parent_class.length - 1], 'pending')
+    $('.' + parent_class[parent_class.length - 1] + ' .import-file-form').removeClass('hide');
+    $('.' + parent_class[parent_class.length - 1] + ' .import-file-result').removeClass('hide').addClass('hide');
+    $('.' + parent_class[parent_class.length - 1] + ' .cancel-re-upload-file').removeClass('hide');
+  });
+
+  $('.cancel-re-upload-file__action').click(function(e) {
+    e.preventDefault();
+    var parents = $(this).parents();
+    var parent_class = parents[5].className.split(" ");
+    $('.' + parent_class[parent_class.length - 1] + ' .import-file-form').removeClass('hide').addClass('hide');
+    $('.' + parent_class[parent_class.length - 1] + ' .import-file-result').removeClass('hide');
   });
   
   $("#generateButton").click(function(){
@@ -399,6 +415,7 @@ function resourceBoxWaitingStatus(resource_type, row_count)
 }
 
 function resourceImportBoxChangeState(resource_type, state, row_count, last_uploaded) {
+  
   if (state === "waiting") {
     $(resource_type + ' .re-upload-file').css('display', 'inline-block');
     $(resource_type + ' .import-file-form').removeClass('hide').addClass('hide');
@@ -430,19 +447,28 @@ function getStatusResources() {
       } else {
 
         var resource_lists = res.data;
+        var generate_btn_status = 'waiting';
 
         // automate get data
         if (resource_lists.media_wallet.status === 'waiting') {
           resourceBoxWaitingStatus('.media-wallet', resource_lists.media_wallet.total + ' rows');
+        }else{
+          generate_btn_status = 'pending';
         }
         if (resource_lists.withholding_tax.status === 'waiting') {
           resourceBoxWaitingStatus('.withholding-tax', resource_lists.withholding_tax.total + ' rows');
+        }else{
+          generate_btn_status = 'pending';
         }
         if (resource_lists.free_click_cost.status === 'waiting') {
           resourceBoxWaitingStatus('.free-click-cost', resource_lists.free_click_cost.total + ' rows');
+        }else{
+          generate_btn_status = 'pending';
         }
         if (resource_lists.remaining_ice.status === 'waiting') {
           resourceBoxWaitingStatus('.ice', resource_lists.remaining_ice.total + ' rows');
+        }else{
+          generate_btn_status = 'pending';
         }
 
         // import file
@@ -453,6 +479,8 @@ function getStatusResources() {
             resource_lists.gl_cash_advance.total + ' rows',
             resource_lists.gl_cash_advance.updated_at ? resource_lists.gl_cash_advance.updated_at : ''
           );
+        }else{
+          generate_btn_status = 'pending';
         }
         if (resource_lists.google_spending.status === 'waiting') {
           resourceImportBoxChangeState(
@@ -461,6 +489,8 @@ function getStatusResources() {
             resource_lists.google_spending.total + ' rows',
             resource_lists.google_spending.updated_at ? resource_lists.google_spending.updated_at : ''
           );
+        }else{
+          generate_btn_status = 'pending';
         }
         if (resource_lists.facebook_spending.status === 'waiting') {
           resourceImportBoxChangeState(
@@ -469,17 +499,21 @@ function getStatusResources() {
             resource_lists.facebook_spending.total + ' rows',
             resource_lists.facebook_spending.updated_at ? resource_lists.facebook_spending.updated_at : '' 
           );
+        }else{
+          generate_btn_status = 'pending';
         }
-        if (resource_lists.wallet_transfer === 'waiting') {
+        if (resource_lists.wallet_transfer.status === 'waiting') { 
           resourceImportBoxChangeState(
             '.transfer', 
             'waiting',
             resource_lists.wallet_transfer.total + ' rows',
             resource_lists.wallet_transfer.updated_at ? resource_lists.wallet_transfer.updated_at : ''
           );
+        }else{
+          
         }
-
-        buttonGenerateChecking(res.overall_status, res.allowed_generate_data);
+        
+        buttonGenerateChecking(generate_btn_status, res.allowed_generate_data);
       }
 
       setTimeout(function() {

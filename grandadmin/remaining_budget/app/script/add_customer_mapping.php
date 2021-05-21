@@ -38,14 +38,15 @@ function getCustomerMappingData($filePath)
         );
 
         $checkCtm = checkCustomerExists($customerDetail);
-        if ($checkCtm["status"] == "success" && $checkCtm["data"] > 1) {
+        if ($checkCtm["status"] == "success" && $checkCtm["data"] > 0) {
+          echo "ROW " . $i . " - {$customerDetail["customer_id"]}/{$customerDetail["offset_acct"]} is exists \n";
           // update
-          $updateCustomer = updateCustomerData($customerDetail);
-          if ($updateCustomer["status"] === "success") {
-            echo "ROW " . $i . " - {$customerDetail["customer_id"]}/{$customerDetail["offset_acct"]} update success \n";
-          } else {
-            echo "ROW " . $i . " - {$customerDetail["customer_id"]}/{$customerDetail["offset_acct"]} update fail \n --> " . $updateCustomer["data"] . "\n";
-          }
+          // $updateCustomer = updateCustomerData($customerDetail);
+          // if ($updateCustomer["status"] === "success") {
+          //   echo "ROW " . $i . " - {$customerDetail["customer_id"]}/{$customerDetail["offset_acct"]} update success \n";
+          // } else {
+          //   echo "ROW " . $i . " - {$customerDetail["customer_id"]}/{$customerDetail["offset_acct"]} update fail \n --> " . $updateCustomer["data"] . "\n";
+          // }
         } else if ($checkCtm["status"] == "success" && $checkCtm["data"] == 0) {
           // insert
           $insertCustomer = insertCustomerData($customerDetail);
@@ -129,7 +130,7 @@ function insertCustomerData($customerDetail)
     $stmt->bindValue("company","RPTH");
     $stmt->bindParam("parent_id", $customerDetail["customer_id"]);
     $stmt->bindValue("payment_method", "prepaid");
-    $stmt->bindValue("updated_by", "script");
+    $stmt->bindValue("updated_by", "customer_mapping");
     $stmt->execute();
     $result["status"] = "success";
     $result["data"] = "";

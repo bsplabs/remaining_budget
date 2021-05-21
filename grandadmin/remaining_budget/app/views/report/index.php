@@ -31,6 +31,7 @@
 
   <!-- DATA STORE -->
   <div class="border p-5 mt-3 resources">
+
     <div class="row resources-box">
       <!-- Card Data Status -->
       <div class="col-md-3">
@@ -152,6 +153,12 @@
                     <span class="spinner-button spinner-border spinner-border-sm hide" role="status" aria-hidden="true"></span>
                     <span class="text-button ml-2">Import</span>
                   </button>
+                  <span class="d-flex justify-content-center align-items-center ml-3 hide cancel-re-upload-file">
+                    <a href="#" style="font-size: 16px;padding-top: 1px;" class="cancel-re-upload-file__action">
+                      <i class="bx bx-reset"></i> Cancel
+                    </a>
+                  </span>
+                
                 </div>
               </form>
             </div>
@@ -200,6 +207,12 @@
                     <span class="spinner-button spinner-border spinner-border-sm hide" role="status" aria-hidden="true"></span>
                     <span class="text-button ml-2">Import</span>
                   </button>
+                  <span class="d-flex justify-content-center align-items-center ml-3 hide cancel-re-upload-file">
+                    <a href="#" style="font-size: 16px;padding-top: 1px;" class="cancel-re-upload-file__action">
+                      <i class="bx bx-reset"></i> Cancel
+                    </a>
+                  </span>
+                
                 </div>
               </form>
             </div>
@@ -248,6 +261,12 @@
                     <span class="spinner-button spinner-border spinner-border-sm hide" role="status" aria-hidden="true"></span>
                     <span class="text-button ml-2">Import</span>
                   </button>
+                  <span class="d-flex justify-content-center align-items-center ml-3 hide cancel-re-upload-file">
+                    <a href="#" style="font-size: 16px;padding-top: 1px;" class="cancel-re-upload-file__action">
+                      <i class="bx bx-reset"></i> Cancel
+                    </a>
+                  </span>
+
                 </div>
               </form>
             </div>
@@ -282,17 +301,26 @@
 
             <!-- DISPLAY UPLOAD FORM -->
             <div class="import-file-form">
-              <h6 class="card-subtitle mb-2 text-muted">File extension support only .xlsx, .xls</h6>
+              <h6 class="card-subtitle mb-2 text-muted">File extension support only .csv</h6>
               <form enctype="multipart/form-data" class="pt-3" id="upload_transfer_file_form">
                 <div class="mb-3">
                   <div class="upload-container">
                     <div class="border-container">
-                      <input type="file" id="transfer-file-upload" name="transferInputFile" class="form-control" accept=".xls,.xlsx" style="height: 100%">
+                      <input type="file" id="transfer-file-upload" name="transferInputFile" class="form-control" accept=".csv" style="height: 100%">
                     </div>
                   </div>
                 </div>
                 <div class="d-flex justify-content-center">
-                  <button type="submit" id="submit" name="import" class="btn btn-primary">Import</button>
+                  <button type="submit" id="submit" name="import" class="btn btn-primary d-flex align-items-center">
+                    <span class="spinner-button spinner-border spinner-border-sm hide" role="status" aria-hidden="true"></span>
+                    <span class="text-button ml-2">Import</span>
+                  </button>
+                  <span class="d-flex justify-content-center align-items-center ml-3 hide cancel-re-upload-file">
+                    <a href="#" style="font-size: 16px;padding-top: 1px;" class>__action
+                      <i class="bx bx-reset"></i> Cancel
+                    </a>
+                  </span>
+
                 </div>
               </form>
             </div>

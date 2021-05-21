@@ -41,14 +41,14 @@ function getReconcileDate(){
                 <td class="text-right">`+currencyFormat(value.adjustment_cash_advance)+`</td>
                 <td class="text-right">`+currencyFormat(value.adjustment_max)+`</td>
                 <td class="text-right">`+currencyFormat(value.cash_advance)+`</td>
-                <td></td>
+                
                 <td class="text-right">`+currencyFormat(value.remaining_ice)+`</td>
                 <td class="text-right">`+currencyFormat(value.wallet)+`</td>
                 <td class="text-right">`+currencyFormat(value.wallet_free_click_cost)+`</td>
                 <td class="text-right">`+currencyFormat(value.withholding_tax)+`</td>
                 <td class="text-right">`+currencyFormat(value.adjustment_front_end)+`</td>
                 <td class="text-right">`+currencyFormat(value.remaining_budget)+`</td>
-                <td></td>
+                
                 <td class="text-right">`+currencyFormat(value.difference)+`</td>
                 <td>`+stringNullToDash(value.note)+`</td>
                 </tr>`
@@ -82,33 +82,33 @@ function getReconcileDate(){
 
 function appendReconcileRow(value,is_child){
   if(value.adjustment_remain_note != "" && value.adjustment_remain_note != null){
-    var adjustment_remain_html = `<td data-value="`+value.adjustment_remain+`" data-note="`+value.adjustment_remain_note+`" data-column_name="Adjust ยอดยกมา" data-column_type="adjustment_remain" class="text-right edit-able more-note-td" data-toggle="tooltip" data-placement="top" title="" data-original-title="Tooltip on top"><div class="more-note-icon"></div>`+currencyFormat(value.adjustment_remain)+`</td>`;
+    var adjustment_remain_html = `<td data-value="`+value.adjustment_remain+`" data-note="`+value.adjustment_remain_note+`" data-column_name="Adjust ยอดยกมา" data-column_type="adjustment_remain" class="text-right edit-able more-note-td" title="`+value.adjustment_remain_note+`" ><div class="more-note-icon"></div>`+currencyFormat(value.adjustment_remain)+`</td>`;
   }else{
     var adjustment_remain_html = `<td data-value="`+value.adjustment_remain+`" data-note="" data-column_name="Adjust ยอดยกมา" data-column_type="adjustment_remain" class="text-right edit-able" title="click to edit" >`+currencyFormat(value.adjustment_remain)+`</td>`;
   }
   
   if(value.adjustment_free_click_cost_note != "" && value.adjustment_free_click_cost_note != null){
-    var adjustment_free_click_cost_html = `<td data-value="`+value.adjustment_free_click_cost+`" data-note="`+value.adjustment_free_click_cost_note+`" data-column_name="JE + Free Clickcost" data-column_type="adjustment_free_click_cost" class="text-right edit-able more-note-td" data-toggle="tooltip" data-placement="top" title="" data-original-title="Tooltip on top"><div class="more-note-icon"></div>`+currencyFormat(value.adjustment_free_click_cost)+`</td>`;
+    var adjustment_free_click_cost_html = `<td data-value="`+value.adjustment_free_click_cost+`" data-note="`+value.adjustment_free_click_cost_note+`" data-column_name="JE + Free Clickcost" data-column_type="adjustment_free_click_cost" class="text-right edit-able more-note-td" title="`+value.adjustment_free_click_cost_note+`" ><div class="more-note-icon"></div>`+currencyFormat(value.adjustment_free_click_cost)+`</td>`;
   }else{
     var adjustment_free_click_cost_html = `<td data-value="`+value.adjustment_free_click_cost+`" data-note="" data-column_name="JE + Free Clickcost" data-column_type="adjustment_free_click_cost" class="text-right edit-able" title="click to edit" >`+currencyFormat(value.adjustment_free_click_cost)+`</td>`;
   }
   if(value.adjustment_free_click_cost_old_note != "" && value.adjustment_free_click_cost_old_note != null){
-    var adjustment_free_click_cost_old_html = `<td data-value="`+value.adjustment_free_click_cost_old+`" data-note="`+value.adjustment_free_click_cost_old_note+`" data-column_name="Free Clickcost (ค่าใช้จ่ายต้องห้าม)" data-column_type="adjustment_free_click_cost_old" class="text-right edit-able more-note-td" data-toggle="tooltip" data-placement="top" title="" data-original-title="Tooltip on top"><div class="more-note-icon"></div>`+currencyFormat(value.adjustment_free_click_cost_old)+`</td>`;
+    var adjustment_free_click_cost_old_html = `<td data-value="`+value.adjustment_free_click_cost_old+`" data-note="`+value.adjustment_free_click_cost_old_note+`" data-column_name="Free Clickcost (ค่าใช้จ่ายต้องห้าม)" data-column_type="adjustment_free_click_cost_old" class="text-right edit-able more-note-td" title="`+value.adjustment_free_click_cost_old_note+`" ><div class="more-note-icon"></div>`+currencyFormat(value.adjustment_free_click_cost_old)+`</td>`;
   }else{
     var adjustment_free_click_cost_old_html = `<td data-value="`+value.adjustment_free_click_cost_old+`" data-note="" data-column_name="Free Clickcost (ค่าใช้จ่ายต้องห้าม)" data-column_type="adjustment_free_click_cost_old" class="text-right edit-able" title="click to edit" >`+currencyFormat(value.adjustment_free_click_cost_old)+`</td>`;
   }
   if(value.adjustment_cash_advance_note != "" && value.adjustment_cash_advance_note != null){
-    var adjustment_cash_advance_html = `<td data-value="`+value.adjustment_cash_advance+`" data-note="`+value.adjustment_cash_advance_note+`" data-column_name="adjustment" data-column_type="adjustment_cash_advance" class="text-right edit-able more-note-td" data-toggle="tooltip" data-placement="top" title="" data-original-title="Tooltip on top"><div class="more-note-icon"></div>`+currencyFormat(value.adjustment_cash_advance)+`</td>`;
+    var adjustment_cash_advance_html = `<td data-value="`+value.adjustment_cash_advance+`" data-note="`+value.adjustment_cash_advance_note+`" data-column_name="adjustment" data-column_type="adjustment_cash_advance" class="text-right edit-able more-note-td" title="`+value.adjustment_cash_advance_note+`"><div class="more-note-icon"></div>`+currencyFormat(value.adjustment_cash_advance)+`</td>`;
   }else{
     var adjustment_cash_advance_html = `<td data-value="`+value.adjustment_cash_advance+`" data-note="" data-column_name="adjustment" data-column_type="adjustment_cash_advance" class="text-right edit-able" title="click to edit" >`+currencyFormat(value.adjustment_cash_advance)+`</td>`;
   }
   if(value.adjustment_max_note != "" && value.adjustment_max_note != null){
-    var adjustment_max_html = `<td data-value="`+value.adjustment_max+`" data-note="`+value.adjustment_max_note+`" data-column_name="Max" data-column_type="adjustment_max" class="text-right edit-able more-note-td" data-toggle="tooltip" data-placement="top" title="" data-original-title="Tooltip on top"><div class="more-note-icon"></div>`+currencyFormat(value.adjustment_max)+`</td>`;
+    var adjustment_max_html = `<td data-value="`+value.adjustment_max+`" data-note="`+value.adjustment_max_note+`" data-column_name="Max" data-column_type="adjustment_max" class="text-right edit-able more-note-td" title="`+value.adjustment_max_note+`"><div class="more-note-icon"></div>`+currencyFormat(value.adjustment_max)+`</td>`;
   }else{
     var adjustment_max_html = `<td data-value="`+value.adjustment_max+`" data-note="" data-column_name="Max" data-column_type="adjustment_max" class="text-right edit-able" title="click to edit" >`+currencyFormat(value.adjustment_max)+`</td>`;
   }
   if(value.adjustment_front_end_note != "" && value.adjustment_front_end_note != null){
-    var adjustment_front_end_html = `<td data-value="`+value.adjustment_front_end+`" data-note="`+value.adjustment_front_end_note+`" data-column_name="Adjust Front-end" data-column_type="adjustment_front_end" class="text-right edit-able more-note-td" data-toggle="tooltip" data-placement="top" title="" data-original-title="Tooltip on top"><div class="more-note-icon"></div>`+currencyFormat(value.adjustment_front_end)+`</td>`;
+    var adjustment_front_end_html = `<td data-value="`+value.adjustment_front_end+`" data-note="`+value.adjustment_front_end_note+`" data-column_name="Adjust Front-end" data-column_type="adjustment_front_end" class="text-right edit-able more-note-td" title="`+value.adjustment_front_end_note+`" ><div class="more-note-icon"></div>`+currencyFormat(value.adjustment_front_end)+`</td>`;
   }else{
     var adjustment_front_end_html = `<td data-value="`+value.adjustment_front_end+`" data-note="" data-column_name="Adjust Front-end" data-column_type="adjustment_front_end" class="text-right edit-able" title="click to edit" >`+currencyFormat(value.adjustment_front_end)+`</td>`;
   }
@@ -138,14 +138,14 @@ function appendReconcileRow(value,is_child){
     + adjustment_cash_advance_html + ``
     + adjustment_max_html + 
     `<td class="text-right">`+currencyFormat(value.cash_advance)+`</td>
-    <td></td>
+    
     <td class="text-right">`+currencyFormat(value.remaining_ice)+`</td>
     <td class="text-right">`+currencyFormat(value.wallet)+`</td>
     <td class="text-right">`+currencyFormat(value.wallet_free_click_cost)+`</td>
     <td class="text-right">`+currencyFormat(value.withholding_tax)+`</td>`
     + adjustment_front_end_html +
     `<td class="text-right">`+currencyFormat(value.remaining_budget)+`</td>
-    <td></td>
+    
     <td class="text-right">`+currencyFormat(value.difference)+`</td>
     <td>`+stringNullToDash(value.note)+`</td>
     </tr>`
@@ -154,7 +154,7 @@ function appendReconcileRow(value,is_child){
 
 function renderDataTables(){
   datatable = $('#report_reconcile_table').DataTable({
-    "scrollY": 300,
+    "scrollY": "80vh",
     "scrollX": true,
     "lengthChange": false,
     "searching": true,
@@ -265,7 +265,7 @@ function closePeriod(){
         $("#toast_header").text("Closed");
         $("#toast_body").text("Reconcile Data is closed");
         $("#liveToast").toast('show');
-        location.reload();
+        location.reload(base_url+'/reports/'+res.year+'/'+res.month);
       }else{
         $("#modalClosePeriod").modal('hide');
         $("#toast_header").text("Something wrong!!!");

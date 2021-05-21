@@ -192,7 +192,7 @@ class FreeClickCostResources
               SET remaining_budget_customer_id = :remaining_budget_customer_id,
                   clearing_id = :clearing_id,
                   pay_date = :pay_date,
-                  coupon = coupon + :coupon,
+                  coupon = :coupon,
                   updated_at = NOW()
               WHERE month = :month
                 AND year = :year
@@ -329,7 +329,7 @@ class FreeClickCostResources
 
       // clear free click cost data by month and year
       $this->clearFreeClickCostByMonthYear($val["month"], $val["year"]);
-      $this->updateReportStatus($val["month"], $val["year"], "free_click_cost", "pending");
+      // $this->updateReportStatus($val["month"], $val["year"], "free_click_cost", "pending");
 
       foreach ($get_free_click_cost["data"] as $free_click_cost) 
       {

@@ -33,7 +33,6 @@ function getCustomerMappingData($filePath)
   if (($handle = fopen("{$filePath}", "r")) !== FALSE) {
     for ($i = 0; $row = fgetcsv($handle); ++$i) {
       if ($i > 0) {
-        print_r($row);
         $paymentMethod = array(
           "source" => $row[0],
           "customer_id" => $row[1],
@@ -123,7 +122,7 @@ function insertCustomerPaymentMethod($customerDetail)
     $stmt->bindParam("payment_method", $customerDetail["payment_method"]);
     $stmt->bindValue("company","RPTH");
     $stmt->bindParam("parent_id", $customerDetail["customer_id"]);
-    $stmt->bindValue("updated_by", "script");
+    $stmt->bindValue("updated_by", "payment_method");
     $stmt->execute();
     $result["status"] = "success";
     $result["data"] = "";

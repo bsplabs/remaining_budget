@@ -210,11 +210,29 @@ class Resource
     return $result;
   }
 
+  public function findCustomerIdOnTrackingWebProTable($ads_id, $ads_service_type)
+  {
+    try {
+      $mainDB = $this->db->dbCon("latin1");
+      $sql = "SELECT CustomerID, bill_firstname, bill_lastname, bill_company FROM tracking_webpro_new_members WHERE {$ads_service_type} = '{$ads_id}'";
+      $stmt = $mainDB->prepare($sql);
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
   public function findCustomerName($ads_type, $ads_id)
   {
     try {
       $mainDB = $this->db->dbCon("latin1");
-      $sql = "SELECT bill_firstname, bill_lastname, bill_company FROM tracking_webpro_new_members WHERE {$ads_type} = '{$ads_id}'";
+      $sql = "SELECT CustomerID, bill_firstname, bill_lastname, bill_company FROM tracking_webpro_new_members WHERE {$ads_type} = '{$ads_id}'";
       $stmt = $mainDB->prepare($sql);
       $stmt->execute();
       $result["status"] = "success";
@@ -231,15 +249,25 @@ class Resource
   public function findRemainingBudgetCustomerID($grandadmin_customer_id, $grandadmin_customer_name)
   {
     try {
-      $mainDB = $this->db->dbCon("latin1");
-      $sql = "SELECT id FROM remaining_budget_customers WHERE grandadmin_customer_id = :grandadmin_customer_id and grandadmin_customer_name = :grandadmin_customer_name order by is_parent limit 1";
+      $mainDB = $this->db->dbCon();
+      
+      $sql = "SELECT id 
+              FROM remaining_budget_customers 
+              WHERE grandadmin_customer_id = :grandadmin_customer_id 
+                AND grandadmin_customer_name = :grandadmin_customer_name 
+              ORDER BY is_parent LIMIT 1";
+
       $stmt = $mainDB->prepare($sql);
       $stmt->bindParam("grandadmin_customer_id", $grandadmin_customer_id);
       $stmt->bindParam("grandadmin_customer_name", $grandadmin_customer_name);
+      
       $stmt->execute();
       $result["status"] = "success";
       $data = $stmt->fetch(PDO::FETCH_ASSOC);
       $result["data"] = $data["id"];
+      if($result["data"] == NULL){
+        $result["status"] = "fail";
+      }
     } catch (PDOException $e) {
       $result["status"] = "fail";
       $result["data"] = $e->getMessage();
@@ -281,9 +309,11 @@ class Resource
       $stmt->bindParam("parent_id", $customer_id);
       $stmt->bindValue("payment_method", "prepaid");
       $stmt->bindValue("updated_by", "script");
+
       $stmt->execute();
       $result["status"] = "success";
       $result["data"] = $mainDB->lastInsertId();
+      
     } catch (PDOException $e) {
       $result["status"] = "fail";
       $result["data"] = $e->getMessage();
@@ -481,7 +511,28 @@ class Resource
     return $result;
   }
 
+  public function clearWalletTransferByMonthYear($month, $year)
+  {
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "DELETE FROM remaining_budget_wallet_transfer WHERE month = :month AND year = :year";
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("month", $month);
+      $stmt->bindParam("year", $year);
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = "";
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+
   public function insertWalletTransfer($month, $year, $wallet_transfer){
+    
     try{
       $mainDB = $this->db->dbCon();
       $sql = "INSERT INTO remaining_budget_wallet_transfer (

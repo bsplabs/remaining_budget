@@ -56,7 +56,7 @@ class WithholdingTax
       $sql = "SELECT *
               FROM remaining_budget_withholding_tax
               WHERE month = :month and year = :year and is_reconcile = false
-              ORDER BY id limit 100;";
+              ORDER BY id";
 
       $stmt = $mainDB->prepare($sql);
       $stmt->bindParam("month", $month);

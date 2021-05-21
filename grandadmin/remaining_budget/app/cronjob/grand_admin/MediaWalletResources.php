@@ -347,21 +347,31 @@ class MediaWalletResources
 
   public function run()
   {
+    $last_month_timestamp =  strtotime("-1 month");
+    $primary_month = date("m", $last_month_timestamp);
+    $primary_year = date("Y", $last_month_timestamp);
 
     $get_month_year = $this->getMonthYearFromReportStatusTable();
+    if (empty($get_month_year["data"])) {
+      $this->createReportStatus($primary_month, $primary_year);
+      $get_month_year["data"][0] = array(
+        "month" => $primary_month,
+        "year" => $primary_year
+      );
+    }
 
     foreach ($get_month_year["data"] as $key => $val) 
     {
       $get_media_wallet = $this->getMediaWallet($val["month"], $val["year"]);
-      // echo $val["month"] . " - " . $val["year"] . " --------------------------------------------------> \n";
-      // echo "Founded: " . count($get_media_wallet["data"]) . " rows \n";
-      // echo "\n";
+      echo $val["month"] . " - " . $val["year"] . " --------------------------------------------------> \n";
+      echo "Founded: " . count($get_media_wallet["data"]) . " rows \n";
+      echo "\n";
 
       if (empty($get_media_wallet["data"])) continue;
 
       // clear media wallet data by month and year
       $this->clearMediaWalletByMonthYear($val["month"], $val["year"]);
-      $this->updateReportStatus($val["month"], $val["year"], "media_wallet", "pending");
+      // $this->updateReportStatus($val["month"], $val["year"], "media_wallet", "pending");
 
       foreach ($get_media_wallet["data"] as $media_wallet) 
       {

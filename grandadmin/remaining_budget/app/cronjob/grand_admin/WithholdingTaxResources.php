@@ -301,13 +301,13 @@ class WithholdingTaxResources
     $primary_year = date("Y", $last_month_timestamp);
 
     $get_month_year = $this->getMonthYearFromReportStatusTable();
-    if (empty($get_month_year["data"])) {
-      $this->createReportStatus($primary_month, $primary_year);
-      $get_month_year["data"][0] = array(
-        "month" => $primary_month,
-        "year" => $primary_year
-      );
-    }
+    // if (empty($get_month_year["data"])) {
+    //   $this->createReportStatus($primary_month, $primary_year);
+    //   $get_month_year["data"][0] = array(
+    //     "month" => $primary_month,
+    //     "year" => $primary_year
+    //   );
+    // }
 
     foreach ($get_month_year["data"] as $key => $val) 
     {

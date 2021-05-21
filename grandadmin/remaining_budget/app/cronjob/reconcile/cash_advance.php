@@ -33,6 +33,7 @@ class CashAdvance
         $remaining_budget_id = $cash_advance["remaining_budget_customer_id"];
         $reconcile = $this->moveToReport($total,$remaining_budget_id,$month,$year);
       }
+      $this->updateStatus('completed',$cash_advance_job["id"]);
     }
   }
 
@@ -48,6 +49,26 @@ class CashAdvance
       $stmt->execute();
       $result["status"] = "success";
       $result["data"] = $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+  private function updateStatus($status,$id){
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "UPDATE remaining_budget_report_status SET cash_advance = :status where id = :id";
+
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("status", $status);
+      $stmt->bindParam("id", $id);
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = "";
     } catch (PDOException $e) {
       $result["status"] = "fail";
       $result["data"] = $e->getMessage();

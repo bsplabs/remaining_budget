@@ -16,7 +16,7 @@ class RemainingICE
   {
     try {
       $mainDB = $this->db->dbCon();
-      $sql = "SELECT month, year FROM remaining_budget_report_status WHERE type = 'default' AND free_click_cost = 'pending' ORDER BY year ASC, month ASC Limit 1;";
+      $sql = "SELECT month, year FROM remaining_budget_report_status WHERE type = 'default' AND remaining_ice = 'pending' ORDER BY year ASC, month ASC Limit 1;";
       $stmt = $mainDB->query($sql);
       $result["status"] = "success";
       $result["data"] = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -81,20 +81,12 @@ class RemainingICE
     $limit = 100;
 
     $get_month_year = $this->getMonthYearFromReportStatusTable();
-    if (empty($get_month_year["data"])) {
-      $this->createReportStatus($primary_month, $primary_year);
-      $get_month_year["data"][0] = array(
-        "month" => $primary_month,
-        "year" => $primary_year
-      );
-    }
-
     foreach ($get_month_year["data"] as $month_year_key => $month_year_val) 
     {
       $month = $month_year_val['month'];  
       $year = $month_year_val['year']; 
 
-      $this->updateReportStatus($month, $year, "remaining_ice", "pending");
+      // $this->updateReportStatus($month, $year, "remaining_ice", "pending");
 
       // ========== Google Service
       $service_name = "google";
@@ -170,25 +162,21 @@ class RemainingICE
       $find_customer_id = $this->findCustomerIdOnReadyTopupTable($value['account_id']);
       if ($find_customer_id["status"] === 'success' && !empty($find_customer_id['data'])) {
         $remaining_ice['grandadmin_customer_id'] = $find_customer_id['data'];
-      } else {
-        // google service -->  AdwordsCusId column
-        $find_customer_id = $this->findCustomerIdOnTrackingWebProNewMembersTable($value['account_id'], $service_column);
-        if ($find_customer_id['status'] === 'success' && !empty($find_customer_id['data'])) {
-          $remaining_ice['grandadmin_customer_id'] = $find_customer_id['data'];
-        }
       }
 
       // find customer name
-      if (!empty($remaining_ice['grandadmin_customer_id'])) {
-        $find_customer_name = $this->findCustomerNameOnTrackingWebProNewMembersTable($remaining_ice['grandadmin_customer_id']);
-        if ($find_customer_name["status"] === "success" && !empty($find_customer_name["data"])) {
-          if (empty($find_customer_name['data']["bill_company"])) {
-            $customer_name = iconv('TIS-620','UTF-8',$find_customer_name['data']["bill_firstname"]) . " " . iconv('TIS-620','UTF-8',$find_customer_name['data']["bill_lastname"]);
-          } else {
-            $customer_name = iconv('TIS-620','UTF-8',$find_customer_name['data']["bill_company"]);
-          }
-          $remaining_ice["grandadmin_customer_name"] = $customer_name;
+      $find_customer_data = $this->findCustomerNameOnTrackingWebProNewMembersTable($value['account_id'], $service_column);
+      if ($find_customer_data["status"] === "success" && !empty($find_customer_data["data"])) {
+        if (empty($remaining_ice['grandadmin_customer_id'])) {
+          $remaining_ice['grandadmin_customer_id'] = $find_customer_data['data']['CustomerID'];
         }
+
+        if (empty($find_customer_data['data']["bill_company"])) {
+          $customer_name = iconv('TIS-620','UTF-8', $find_customer_data['data']["bill_firstname"]) . " " . iconv('TIS-620','UTF-8',$find_customer_data['data']["bill_lastname"]);
+        } else {
+          $customer_name = iconv('TIS-620','UTF-8', $find_customer_data['data']["bill_company"]);
+        }
+        $remaining_ice["grandadmin_customer_name"] = $customer_name;
       }
 
       // find remaining budget customer
@@ -210,6 +198,7 @@ class RemainingICE
 
   public function getRemainigICE($service, $month, $year, $offset, $limit)
   {
+    // echo "\n getRemainingICE ------> is running...  \n";
     $headers = array(
       'Api-Access-Token: 9fc5faeff1e9e49bc2db82b4481ddc00',
     );
@@ -218,7 +207,7 @@ class RemainingICE
       "service" => $service,
       "year" => $year,
       "month" => $month,
-      "accounts" => "",
+      "account" => "",
       "offset" => $offset,
       "limit" => $limit
     );
@@ -282,20 +271,15 @@ class RemainingICE
     return $result;
   }
 
-  public function findCustomerNameOnTrackingWebProNewMembersTable($customer_id)
+  public function findCustomerNameOnTrackingWebProNewMembersTable($ads_id, $ads_service_type)
   {
     try {
       $mainDB = $this->db->dbCon("latin1");
-
-      $sql = "SELECT bill_firstname, bill_lastname, bill_company FROM tracking_webpro_new_members WHERE CustomerID = :customer_id";
-
+      $sql = "SELECT CustomerID, bill_firstname, bill_lastname, bill_company FROM tracking_webpro_new_members WHERE {$ads_service_type} = '{$ads_id}'";
       $stmt = $mainDB->prepare($sql);
-      $stmt->bindParam('customer_id', $customer_id);
-
       $stmt->execute();
       $result["status"] = "success";
       $result["data"] = $stmt->fetch(PDO::FETCH_ASSOC);
-
     } catch (PDOException $e) {
       $result["status"] = "fail";
       $result["data"] = $e->getMessage();

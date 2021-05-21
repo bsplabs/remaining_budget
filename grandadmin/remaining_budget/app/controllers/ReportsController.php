@@ -1,4 +1,5 @@
 <?php
+error_reporting(E_ALL & ~E_NOTICE);
 
 require_once ROOTPATH . "/app/vendors/PHPExcel/PHPExcel/IOFactory.php";
 
@@ -21,6 +22,7 @@ class ReportsController extends Controller
 
   public function index($year = "", $month = "")
   {
+    
     $data = array();
     $month_year_lists = array();
     $getMonthYearLists = $this->reportModel->getMonthYearLists();
@@ -160,6 +162,7 @@ class ReportsController extends Controller
           $gl_cash_advance = $report_status["data"]["gl_cash_advance"];
           if($media_wallet == 'waiting' && $withholding_tax == 'waiting' && $free_click_cost == 'waiting' && $google_spending == 'waiting' && $facebook_spending == 'waiting' && $remaining_ice == 'waiting' && $gl_cash_advance == 'waiting'){
             $update_status = $this->reportModel->updateReportStatus($month, $year, "overall_status", "waiting");
+            $update_status = $this->reportModel->updateReportStatus($month, $year, "cash_advance", "waiting");
             $res = array(
               "status" => "success"
             );
@@ -288,23 +291,30 @@ class ReportsController extends Controller
           $mark_close = $this->reportModel->closePeriod($month, $year, $created_by);
           $server_month = date("m");
           $server_year = date("Y");
-          $is_this_month_job_exit = $this->reportModel->checkThisMonthJob($server_month, $server_year);
-          if(!$is_this_month_job_exit){
-            $create_job = $this->reportModel->createReportStatus($server_month, $server_year);
+          $next_month = date('m', strtotime('+1 month', strtotime($year.'-'.$month.'-01')));
+          $next_month_year = date('Y', strtotime('+1 month', strtotime($year.'-'.$month.'-01')));
+          if($next_month < $server_month || $next_month_year < $server_year){
+            $is_this_month_job_exit = $this->reportModel->checkThisMonthJob($next_month, $next_month_year);
+            if(!$is_this_month_job_exit){
+              $create_job = $this->reportModel->createReportStatus($next_month, $next_month_year);
+            }
+            if($mark_close){
+              $res = array(
+                "status" => "success",
+                "month" => $month,
+                "year" => $year
+              );
+              echo json_encode($res);
+              exit;
+            }else{
+              $res = array(
+                "status" => "fail"
+              );
+              echo json_encode($res);
+              exit;
+            }
           }
-          if($mark_close){
-            $res = array(
-              "status" => "success"
-            );
-            echo json_encode($res);
-            exit;
-          }else{
-            $res = array(
-              "status" => "fail"
-            );
-            echo json_encode($res);
-            exit;
-          }
+          
         }
       }else{
         $res = array(

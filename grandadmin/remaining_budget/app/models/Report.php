@@ -646,7 +646,7 @@ class Report
       sum(r.adjustment_cash_advance) as adjustment_cash_advance,r.adjustment_cash_advance,sum(r.adjustment_max) as adjustment_max,r.adjustment_max,sum(r.cash_advance) as cash_advance, sum(r.remaining_ice) as remaining_ice,
       sum(r.wallet) as wallet, sum(r.wallet_free_click_cost) as wallet_free_click_cost, sum(r.withholding_tax) as withholding_tax, sum(r.adjustment_front_end) as adjustment_front_end,r.adjustment_front_end_note,
       sum(r.remaining_budget) as remaining_budget, sum(r.difference) as difference,r.note as note,
-      count(c.parent_id) as amount FROM remaining_budget_report r LEFT JOIN remaining_budget_customers c ON c.id = r.remaining_budget_customer_id WHERE r.year = :year and r.month = :month and c.parent_id is not null GROUP BY c.parent_id ORDER BY c.parent_id ASC limit 100;";
+      count(c.parent_id) as amount FROM remaining_budget_report r LEFT JOIN remaining_budget_customers c ON c.id = r.remaining_budget_customer_id WHERE r.year = :year and r.month = :month and c.parent_id is not null GROUP BY c.parent_id ORDER BY c.parent_id ASC LIMIT 100;";
       $stmt = $mainDB->prepare($sql);
       $stmt->bindParam("year", $year);
       $stmt->bindParam("month", $month);
@@ -701,7 +701,7 @@ class Report
   
   public function updateReportData($report_id,$value,$note,$type)
   {
-    $types = array("remaining_remain","adjustment_free_click_cost","adjustment_free_click_cost_old","adjustment_cash_advance", "adjustment_max", "adjustment_front_end");
+    $types = array("adjustment_remain","adjustment_free_click_cost","adjustment_free_click_cost_old","adjustment_cash_advance", "adjustment_max", "adjustment_front_end");
     $type_note = $type."_note";
     try {
       if(in_array($type,$types)){
@@ -787,7 +787,7 @@ class Report
       if($condition != ""){
         $sql .= " WHERE ".$condition;
       }
-      $sql .= " Limit 5";
+      $sql .= " Limit 50";
 
       $stmt = $mainDB->prepare($sql);
       if($condition != ""){

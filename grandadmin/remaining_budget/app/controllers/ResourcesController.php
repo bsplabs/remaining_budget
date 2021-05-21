@@ -21,20 +21,6 @@ class ResourcesController extends Controller
     // header("Location: ");
   }
 
-  public function getIce()
-  {
-    $data = $this->resourceModel->getGoogleSpending();
-    echo "<pre>";
-    print_r($data);
-    echo "</pre>";
-  }
-
-  public function ice()
-  {
-    // $this->uploadFacebookSpending();
-    // $this->uploadGoogleSpending();
-  }
-
   public function importGoogleSpending()
   {
     header("Content-Type: application/json");
@@ -118,12 +104,15 @@ class ResourcesController extends Controller
             $customer_name = iconv('TIS-620','UTF-8',$find_customer_name["data"]["bill_company"]);
           }
           $value["grandadmin_customer_name"] = $customer_name;
+          if($value["grandadmin_customer_id"] == ""){
+            $value["grandadmin_customer_id"] = $find_customer_name["data"]["CustomerID"];
+          }
         } else {
           $value["grandadmin_customer_name"] = "";
         }
 
         // Find remaining_budget_customer_id
-        if ($value["grandadmin_customer_name"] !== "" && $value["grandadmin_customer_id"] !== "") {
+        if ($value["grandadmin_customer_name"] != "" && $value["grandadmin_customer_id"] != "") {
           $find_remaining_budget_customer_id = $this->resourceModel->findRemainingBudgetCustomerID($value["grandadmin_customer_id"], $value["grandadmin_customer_name"]);
           if ($find_remaining_budget_customer_id["status"] === "success") {
             $value["remaining_budget_customer_id"] = $find_remaining_budget_customer_id["data"];
@@ -139,7 +128,12 @@ class ResourcesController extends Controller
         } else {
           $value["remaining_budget_customer_id"] = NULL;
         }
-
+        // if ($value["remaining_budget_customer_id"] == NULL && $value["google_id"] != '668-960-0276'){
+        //   print_r($value);
+        //   print_r($find_remaining_budget_customer_id);
+        //   print_r($addnew_gac);
+        //   exit;
+        // }
         $insert_google_spending = $this->resourceModel->addGoogleSpendingData($month, $year, $value);
         if ($insert_google_spending["status"] === "success") {}
       }
@@ -191,7 +185,7 @@ class ResourcesController extends Controller
       echo json_encode($response);
       exit;
     }
-    
+
   }
 
   public function updateGoogleSpending()
@@ -282,6 +276,9 @@ class ResourcesController extends Controller
             $customer_name = iconv('TIS-620','UTF-8',$find_customer_name["data"]["bill_company"]);
           }
           $value["grandadmin_customer_name"] = $customer_name;
+          if($value["grandadmin_customer_id"] == ""){
+            $value["grandadmin_customer_id"] = $find_customer_name["data"]["CustomerID"];
+          }
         } else {
           $value["grandadmin_customer_name"] = "";
         }
@@ -427,6 +424,8 @@ class ResourcesController extends Controller
                 "error_message" => "Month and Year (billing_date) do not match with last month and year"
               ));
               $invalid_total++;
+              print_r($invalid_lists);
+              exit;
               continue;
             }
 
@@ -469,47 +468,48 @@ class ResourcesController extends Controller
         foreach ($fb_spending_lists as $idx => $fb_spending) 
         {
           // Find grandadmin_customer_id
+          $fb_spending["grandadmin_customer_id"] = "";
+          $fb_spending["grandadmin_customer_name"] = "";
+          $fb_spending["remaining_budget_customer_id"] = NULL;
+
           $find_customer_id = $this->resourceModel->findCustomerID($fb_spending, "facebook");
-          if ($find_customer_id["status"] === "success") {
+          if ($find_customer_id["status"] === "success" && !empty($find_customer_id['data'])) {
             $fb_spending["grandadmin_customer_id"] = $find_customer_id["data"]["CustomerID"];
-          } else {
-            $fb_spending["grandadmin_customer_id"] = "";
           }
 
-          // Find grandadmin_customer_name
-          $find_customer_name = $this->resourceModel->findCustomerName("facebookID", $fb_spending["facebook_id"]);
-          if ($find_customer_name["status"] === "success" && !empty($find_customer_name["data"])) {
-            if (empty($find_customer_name["data"]["bill_company"])) {
-              $customer_name = iconv('TIS-620','UTF-8',$find_customer_name["data"]["bill_firstname"]) . " " . iconv('TIS-620','UTF-8', $find_customer_name["data"]["bill_lastname"]);
+
+          $find_customer_id_on_tracking_webpro = $this->resourceModel->findCustomerIdOnTrackingWebProTable($fb_spending['facebook_id'], "facebookID");
+          if ($find_customer_id_on_tracking_webpro['status'] === 'success' && !empty($find_customer_id_on_tracking_webpro['data'])) {
+            $customer_data = $find_customer_id_on_tracking_webpro['data'];
+            // assign customer id
+            if (empty($fb_spending["grandadmin_customer_id"])) {
+              $fb_spending["grandadmin_customer_id"] = $customer_data['CustomerID'];
+            }
+            // assign customer name
+            if (empty($customer_data["bill_company"])) {
+              $customer_name = iconv('TIS-620','UTF-8',$customer_data["bill_firstname"]) . " " . iconv('TIS-620','UTF-8', $customer_data["bill_lastname"]);
             } else {
-              $customer_name = iconv('TIS-620','UTF-8',$find_customer_name["data"]["bill_company"]);
+              $customer_name = iconv('TIS-620','UTF-8',$customer_data["bill_company"]);
             }
             $fb_spending["grandadmin_customer_name"] = $customer_name;
+            // if($fb_spending["grandadmin_customer_id"] == ""){
+            //   $fb_spending["grandadmin_customer_id"] = $customer_data["data"]["CustomerID"];
+            // }
           } else {
             $fb_spending["grandadmin_customer_name"] = "";
           }
-          
-          // if (empty($fb_spending["grandadmin_customer_id"])) {
-          //   $fb_spending["grandadmin_customer_name"] = "";
-          // } else {
-
-          // }
 
           // Find remaining_budget_customer_id
           if ($fb_spending["grandadmin_customer_name"] !== "" && $fb_spending["grandadmin_customer_id"] !== "") {
-            $find_remaining_budget_customer_id = $this->resourceModel->findRemainingBudgetCustomerID();
+            $find_remaining_budget_customer_id = $this->resourceModel->findRemainingBudgetCustomerID($fb_spending["grandadmin_customer_id"],$fb_spending["grandadmin_customer_name"]);
             if ($find_remaining_budget_customer_id["status"] === "success") {
               $fb_spending["remaining_budget_customer_id"] = $find_remaining_budget_customer_id["data"];
             } else {
               $addnew_gac = $this->resourceModel->addNewGrandAdminCustomer($fb_spending["grandadmin_customer_id"], $fb_spending["grandadmin_customer_name"]);
-              if ($addnew_gac["status"] === "success" && empty($addnew_gac["data"])) {
+              if ($addnew_gac["status"] === "success" && !empty($addnew_gac["data"])) {
                 $fb_spending["remaining_budget_customer_id"] = $addnew_gac["data"];
-              } else {
-                $fb_spending["remaining_budget_customer_id"] = NULL;
               }
             } 
-          } else {
-            $fb_spending["remaining_budget_customer_id"] = NULL;
           }
 
           $insert_facebook_spending = $this->resourceModel->insertFacebookSpending($month, $year, $fb_spending);
@@ -691,6 +691,9 @@ class ResourcesController extends Controller
               $customer_name = iconv('TIS-620','UTF-8',$find_customer_name["data"]["bill_company"]);
             }
             $fb_spending["grandadmin_customer_name"] = $customer_name;
+            if($fb_spending["grandadmin_customer_id"] == ""){
+              $fb_spending["grandadmin_customer_id"] = $find_customer_name["data"]["CustomerID"];
+            }
           } else {
             $fb_spending["grandadmin_customer_name"] = "";
           }
@@ -838,21 +841,36 @@ class ResourcesController extends Controller
         }
         fclose($handle);
 
-        // Clear data by month and year
-        // $this->resourceModel->clearWalletTransferByMonthYear($month, $year);
+        
+        $this->resourceModel->clearWalletTransferByMonthYear($month, $year);
         
         foreach ($wallet_transfers as $idx => $wallet_transfer) 
         {
-          if ($wallet_transfers[$idx]["source_grandadmin_customer_id"] !== "" && $wallet_transfers[$idx]["source_grandadmin_customer_name"] !== "" && 
-          $wallet_transfers[$idx]["destination_grandadmin_customer_id"] !== "" && $wallet_transfers[$idx]["destination_grandadmin_customer_name"] !== "") 
+          if ($wallet_transfer["source_grandadmin_customer_id"] !== "" && $wallet_transfer["source_grandadmin_customer_name"] !== "" && 
+          $wallet_transfer["destination_grandadmin_customer_id"] !== "" && $wallet_transfer["destination_grandadmin_customer_name"] !== "") 
           {
-            $wallet_transfers[$idx]["source_remaining_budget_customer_id"] = $this->getRemainingBudgetCustomerId('grandadmin',$wallet_transfers[$idx]["source_grandadmin_customer_id"],$wallet_transfers[$idx]["source_grandadmin_customer_name"],'wallet_transfer');
-            $wallet_transfers[$idx]["destination_remaining_budget_customer_id"] = $this->getRemainingBudgetCustomerId('grandadmin',$wallet_transfers[$idx]["destination_grandadmin_customer_id"],$wallet_transfers[$idx]["destination_grandadmin_customer_name"],'wallet_transfer');
-            $wallet_transfers[$idx]["updated_by"] = $updated_by;
-            $insert_wallet_transfer = $this->resourceModel->insertWalletTransfer($month, $year, $wallet_transfers[$idx]);
-
+            $tmp = $this->getRemainingBudgetCustomerId('grandadmin',$wallet_transfer["source_grandadmin_customer_id"],$wallet_transfer["source_grandadmin_customer_name"],'wallet_transfer');
+            $wallet_transfer["source_remaining_budget_customer_id"] = $tmp["data"]["id"];
+            $tmp = $this->getRemainingBudgetCustomerId('grandadmin',$wallet_transfer["destination_grandadmin_customer_id"],$wallet_transfer["destination_grandadmin_customer_name"],'wallet_transfer');
+            $wallet_transfer["destination_remaining_budget_customer_id"] = $tmp["data"]["id"];
+            $wallet_transfer["updated_by"] = $updated_by;
+            $insert_wallet_transfer = $this->resourceModel->insertWalletTransfer($month, $year, $wallet_transfer);
           }
         }
+        $this->reportModel->updateReportStatus($month, $year, "transfer", "waiting");
+        $response = array(
+          "status" => "success",
+          "type" => "alert",
+          "overall_status" => 'pending',
+          "allowed_generate_data" => 'true',
+          "message" => "",
+          "data" => array(
+            "import_total" => $data_index,
+            "updated_at" => date('Y-m-d')
+          )
+        );
+        echo json_encode($response);
+        exit;
       } else {
         $res = array(
           "status" => "fail",
@@ -1136,8 +1154,8 @@ class ResourcesController extends Controller
       $overall_status = $get_status_resources["data"]["overall_status"];
       if ($waiting === 7 && $overall_status == "pending") {
         // update overall status
-        $this->reportModel->updateReportStatus($month, $year, "overall_status", "waiting");
-        $overall_status = "waiting";
+        // $this->reportModel->updateReportStatus($month, $year, "overall_status", "waiting");
+        // $overall_status = "waiting";
       }
 
       // check previousely reconcile data

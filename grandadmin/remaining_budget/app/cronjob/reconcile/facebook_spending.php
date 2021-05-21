@@ -14,6 +14,7 @@ class FacebookSpending
   public function run(){
     $facebook_spending_job = $this->getJob();
     $facebook_spending_job = $facebook_spending_job["data"];
+    print_r($facebook_spending_job);
     if($facebook_spending_job['facebook_spending'] == 'waiting'){
       $facebook_spending_raw_data = $this->getRawData($facebook_spending_job['month'],$facebook_spending_job['year']);
       foreach($facebook_spending_raw_data["data"] as $facebook_spending){
@@ -34,7 +35,7 @@ class FacebookSpending
       $mainDB = $this->db->dbCon();
       $sql = "SELECT *
               FROM remaining_budget_report_status
-              WHERE overall_status == 'waiting'
+              WHERE overall_status = 'waiting'
               ORDER BY month,year Limit 1";
 
       $stmt = $mainDB->prepare($sql);
@@ -118,6 +119,7 @@ class FacebookSpending
     $this->db->dbClose($mainDB);
     return $result;
   }
+  
 
   
 }

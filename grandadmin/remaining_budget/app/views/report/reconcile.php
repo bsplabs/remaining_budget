@@ -83,7 +83,7 @@ var is_closed = "<?php echo $data["is_closed"];?>";
     </div>
   </div>
   
-  <div class="table-responsive mt-3">
+  <div class="mt-3">
     <table class="table table-bordered text-nowrap table-hover" id="report_reconcile_table">
       <!-- COLGROUP -->
       <colgroup>
@@ -94,12 +94,21 @@ var is_closed = "<?php echo $data["is_closed"];?>";
         <col />
         <col />
         <col />
-        <col />
-        <col />
-        <col />
-        <col />
-        <col />
-        <col />
+        <col style="background-color: #c2dcf840;" />
+        <col style="background-color: #c2dcf840;" />
+        <col style="background-color: #c2dcf840;" />
+        <col style="background-color: #c2dcf840;" />
+        <col style="background-color: #c2dcf840;" />
+        <col style="background-color: #c2dcf840;" />
+        <col style="background-color: #c2dcf840;" />
+        <col style="background-color: #c2dcf840;" />
+        <col style="background-color: #c2dcf840;" />
+        <col style="background-color: #c2dcf840;" />
+        <col style="background-color: #c2dcf840;" />
+        <col style="background-color: #c2dcf840;" />
+        <!--  -->
+        <!-- <col style="background-color: #FFF2CC;" /> -->
+        <!--  -->
         <col />
         <col />
         <col />
@@ -107,19 +116,10 @@ var is_closed = "<?php echo $data["is_closed"];?>";
         <col />
         <col />
         <!--  -->
-        <col style="background-color: #FFF2CC;" />
+        <!-- <col style="background-color: #FFF2CC;" /> -->
         <!--  -->
-        <col />
-        <col />
-        <col />
-        <col />
-        <col />
-        <col />
-        <!--  -->
-        <col style="background-color: #FFF2CC;" />
-        <!--  -->
-        <col />
-        <col />
+        <col style="background-color: #c2dcf840;" />
+        <col style="background-color: #c2dcf840;" />
       </colg>
       <!-- THEAD -->
       <thead>
@@ -143,7 +143,7 @@ var is_closed = "<?php echo $data["is_closed"];?>";
           <th scope="col"></th>
           <th scope="col"></th> -->
           <!--  -->
-          <th scope="col"></th>
+          <!-- <th scope="col"></th> -->
           <!--  -->
           <th scope="col" colspan="6" class="text-center">Other system</th>
           <!-- <th scope="col"></th>
@@ -153,7 +153,7 @@ var is_closed = "<?php echo $data["is_closed"];?>";
           <th scope="col"></th>
           <th scope="col"></th> -->
           <!--  -->
-          <th scope="col"></th>
+          <!-- <th scope="col"></th> -->
           <!--  -->
           <th scope="col" colspan="2" class="text-center">Result</th>
           <!-- <th scope="col"></th> -->
@@ -178,14 +178,12 @@ var is_closed = "<?php echo $data["is_closed"];?>";
           <th scope="col">Adjustment</th>
           <th scope="col">Max</th>
           <th scope="col">Cash Advance</th>
-          <th scope="col"></th>
           <th scope="col">Remaining ICE</th>
           <th scope="col">Wallet</th>
           <th scope="col">Wallet - Free Clickcost (-)</th>
           <th scope="col">Withholding Tax</th>
           <th scope="col">Adjust</th>
           <th scope="col">Remaining Budget</th>
-          <th scope="col"></th>
           <th scope="col">Difference</th>
           <th scope="col">Note</th>
         </tr>

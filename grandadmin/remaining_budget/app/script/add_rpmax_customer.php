@@ -110,7 +110,7 @@ function insertRPMaxAccount($rpMaxData)
     $stmt->bindParam("company", $rpMaxData["company"]);
     $stmt->bindParam("parent_id", $rpMaxData["grandadmin_customer_id"]);
     $stmt->bindValue("payment_method", "prepaid");
-    $stmt->bindValue("updated_by", "script");
+    $stmt->bindValue("updated_by", "rpmax_script");
 
     $stmt->execute();
     

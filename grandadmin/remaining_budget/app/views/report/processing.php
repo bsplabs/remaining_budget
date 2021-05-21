@@ -33,6 +33,9 @@
     <label>Report of this month is in Recalculate Process</label><br>
     <small>Please come back later.</small>
   </div>
+  <div class="progress">
+    <div class="progress-bar" role="progressbar" style="width: 25%;" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100">25%</div>
+  </div>
 </div>
 
 <?php require_once APPROOT . "/views/layout/script.php"; ?>

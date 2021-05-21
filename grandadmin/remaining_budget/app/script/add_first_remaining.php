@@ -80,7 +80,7 @@ function addNewCustomer($firstRemainingData)
     $stmt->bindValue("company","RPTH");
     $stmt->bindParam("parent_id", $firstRemainingData["customer_id"]);
     $stmt->bindValue("payment_method", "prepaid");
-    $stmt->bindValue("updated_by", "script");
+    $stmt->bindValue("updated_by", "first_remaining");
     $stmt->execute();
 
     $result["status"] = "success";
