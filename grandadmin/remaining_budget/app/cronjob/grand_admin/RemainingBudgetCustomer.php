@@ -36,6 +36,35 @@ class RemainingBudgetCustomer
     return $result;
   }
 
+  public function checkLastProcess($id)
+  {
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "SELECT count(*) as total FROM remaining_budget_report_status 
+      WHERE cash_advance != 'pending' AND media_wallet != 'pending' AND withholding_tax != 'pending'
+      AND free_click_cost != 'pending' AND google_spending != 'pending' AND facebook_spending != 'pending'
+      AND remaining_ice != 'pending' AND gl_cash_advance != 'pending' AND transfer != 'pending'
+      AND id = :id";
+
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("id", $id);
+
+      $stmt->execute();
+      
+      $total = $stmt->fetch(PDO::FETCH_ASSOC);
+      if ($total["total"] == 0) {
+        $result = false;
+      } else {
+        $result = true;
+      }
+
+    } catch (PDOException $e) {
+      $result = false;
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
   public function addNewCustomer($customerData)
   {
     try {

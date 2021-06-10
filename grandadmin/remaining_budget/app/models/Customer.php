@@ -44,11 +44,15 @@ class Customer
     return $result;
   }
 
-  public function getCustomers($offset, $limit, $order_by, $where)
+  public function getCustomers($offset, $limit, $order_by, $where, $export = false)
   {
     try {
       $mainDB = $this->db->dbCon();
-      $sql = "SELECT * FROM remaining_budget_customers {$where} {$order_by} LIMIT {$offset}, {$limit}";
+      if ($export) {
+        $sql = "SELECT * FROM remaining_budget_customers {$where} {$order_by}";
+      } else {
+        $sql = "SELECT * FROM remaining_budget_customers {$where} {$order_by} LIMIT {$offset}, {$limit}";
+      }
       $stmt = $mainDB->prepare($sql);
       $stmt->execute();
       $result["data"]["customers"] = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -113,9 +117,12 @@ class Customer
   {
     try {
       $mainDB = $this->db->dbCon();
-      $sql = "UPDATE remaining_budget_customers SET main_business = 0 WHERE parent_id = :parent_id";
+      $sql = "UPDATE remaining_budget_customers SET main_business = 0, updated_by = :updated_by WHERE parent_id = :parent_id";
       $stmt = $mainDB->prepare($sql);
       $stmt->bindParam("parent_id", $parent_id);
+      if (isset($_SESSION['admin_username'])) {
+        $stmt->bindParam("updated_by", $_SESSION['admin_username']);
+      }
       $stmt->execute();
       $result["status"] = "success";
       $result["data"] = "";
@@ -140,7 +147,8 @@ class Customer
                   company = :company,
                   payment_method = :payment_method,
                   main_business = :main_business,
-                  updated_at = NOW()
+                  updated_at = NOW(),
+                  updated_by = :updated_by
               WHERE id = :id";
 
       $stmt = $mainDB->prepare($sql);
@@ -157,6 +165,7 @@ class Customer
       } else {
         $stmt->bindValue("main_business", true); 
       }
+      $stmt->bindParam("updated_by", $customer_data['updated_by']);
 
       $stmt->execute();
 
@@ -233,7 +242,8 @@ class Customer
                 company,
                 main_business,
                 parent_id,
-                payment_method
+                payment_method,
+                updated_by
               )
               VALUES (
                 :grandadmin_customer_id,
@@ -243,7 +253,8 @@ class Customer
                 :company,
                 :main_business,
                 :parent_id,
-                :payment_method
+                :payment_method,
+                :updated_by
               )
             ";
 
@@ -256,6 +267,7 @@ class Customer
       $stmt->bindParam("main_business", $customer['main_business']);
       $stmt->bindParam("parent_id", $customer['parent_id']);
       $stmt->bindParam("payment_method", $customer['payment_method']);
+      $stmt->bindParam("updated_by", $customer['updated_by']);
       $stmt->execute();
 
       $result["status"] = "success";
@@ -283,7 +295,8 @@ class Customer
                   main_business = :main_business,
                   parent_id = :parent_id,
                   payment_method = :payment_method,
-                  updated_at = NOW()
+                  updated_at = NOW(),
+                  updated_by = :updated_by
               WHERE id = :id
             ";
 
@@ -296,6 +309,7 @@ class Customer
       $stmt->bindParam("main_business", $customer['main_business']);
       $stmt->bindParam("parent_id", $customer['parent_id']);
       $stmt->bindParam("payment_method", $customer['payment_method']);
+      $stmt->bindParam("updated_by", $customer['updated_by']);
       $stmt->bindParam("id", $customer['id']);
       $stmt->execute();
 

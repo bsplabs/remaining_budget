@@ -1,8 +1,30 @@
 body {
-  font-size: var(--normal-font-size);
-  font-size: 14px;
+  /* font-size: var(--normal-font-size); */
+  font-size: 12px;
 }
 
 .hide {
   display: none !important;
+}
+
+.dataTables_scrollHead {
+  position: sticky !important;
+  top: 0;
+  background-color: white;
+  z-index: 100;
+}
+
+.customer-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  display: none;
+  background: #2a2a2a55;
+}
+
+.customer-overlay-active {
+  display: block;
+  z-index: 1050;
 }

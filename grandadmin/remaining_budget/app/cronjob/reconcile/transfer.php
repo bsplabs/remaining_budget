@@ -15,6 +15,7 @@ class WalletTransfer
     $wallet_transfer_job = $this->getJob();
     $wallet_transfer_job = $wallet_transfer_job["data"];
     if($wallet_transfer_job['transfer'] == 'waiting'){
+      $this->updateStatus('in_progress',$wallet_transfer_job["id"]);
       $wallet_transfer_raw_data = $this->getRawData($wallet_transfer_job['month'],$wallet_transfer_job['year']);
       foreach($wallet_transfer_raw_data["data"] as $wallet_transfer){
           $source_value = $wallet_transfer["source_value"] * - 1;
@@ -29,6 +30,7 @@ class WalletTransfer
             $mark_reconcile = $this->markReconcile($wallet_transfer["id"]);
           }
       }
+      $this->updateStatus('completed',$wallet_transfer_job["id"]);
     }
   }
 
@@ -37,8 +39,8 @@ class WalletTransfer
       $mainDB = $this->db->dbCon();
       $sql = "SELECT *
               FROM remaining_budget_report_status
-              WHERE overall_status != 'completed'
-              ORDER BY month,year Limit 1";
+              WHERE transfer = 'waiting' AND overall_status = 'waiting' AND cash_advance = 'completed'
+              ORDER BY month,year,id Limit 1";
 
       $stmt = $mainDB->prepare($sql);
       $stmt->execute();
@@ -59,7 +61,7 @@ class WalletTransfer
       $sql = "SELECT *
               FROM remaining_budget_wallet_transfer
               WHERE month = :month and year = :year and is_reconcile = false
-              ORDER BY id limit 100;";
+              ORDER BY id";
 
       $stmt = $mainDB->prepare($sql);
       $stmt->bindParam("month", $month);
@@ -81,7 +83,7 @@ class WalletTransfer
 
       $mainDB = $this->db->dbCon();
       $sql = "UPDATE remaining_budget_report
-              SET transfer = transfer + :total
+              SET transfer = transfer + :total, is_reconcile = false
               WHERE remaining_budget_customer_id = :remaining_budget_id and month = :month and year = :year
               ";
 
@@ -122,6 +124,25 @@ class WalletTransfer
     return $result;
   }
 
+  private function updateStatus($status,$id){
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "UPDATE remaining_budget_report_status SET transfer = :status where id = :id";
+
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("status", $status);
+      $stmt->bindParam("id", $id);
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = "";
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
   
 }
 

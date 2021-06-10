@@ -12,7 +12,7 @@
   <br>
   <!-- MONTH/YEAR SELECTION -->
   <div class="row justify-content-end">
-    <div class="col-md-9"><h2>Reconcile Management</h2></div>
+    <div class="col-md-9"><h2>Media Reconciliations Management</h2></div>
     <div class="col-md-3">
       <select class="form-control" aria-label="" id="month-year-selector">
         <?php 
@@ -33,11 +33,12 @@
     <label>Report of this month is in Recalculate Process</label><br>
     <small>Please come back later.</small>
   </div>
-  <div class="progress">
-    <div class="progress-bar" role="progressbar" style="width: 25%;" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100">25%</div>
+  <div class="progress" style="margin-top: 50px;">
+    <div id="report-progress-bar" class="progress-bar bg-info" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">0%</div>
   </div>
 </div>
 
 <?php require_once APPROOT . "/views/layout/script.php"; ?>
 
 <script src="<?php echo BASE_URL; ?>/public/js/report/index.js"></script>
+<script src="<?php echo BASE_URL; ?>/public/js/report/progress.js"></script>

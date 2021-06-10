@@ -35,7 +35,7 @@ class CustomersController extends Controller
         $file_path = $_FILES["inputCustomerFileImport"]['tmp_name'];
         $objPHPExcel = PHPExcel_IOFactory::load($file_path);
         $excelSheet = $objPHPExcel->getActiveSheet();
-        $highestRow = $excelSheet->getHighestRow(); // e.g. 10
+        $highestRow = $excelSheet->getHighestDataRow(); // e.g. 10
 
         $customers = array();
 
@@ -61,6 +61,7 @@ class CustomersController extends Controller
             "main_business" => $main_business,
             "company" => $company,
             "payment_method" => $payment_method,
+            "updated_by" => isset($_SESSION['admin_name']) ? $_SESSION['admin_name'] : ""
           ));
         }
 
@@ -279,11 +280,6 @@ class CustomersController extends Controller
       $_POST = json_decode(file_get_contents('php://input'), true);
     }
 
-    // exit;
-    // $query_string = $this->getQueryString();
-    // echo 'qr ----------> ';
-    // print_r($query_string);
-
     $offset = $_POST["start"];
     $limit = $_POST["length"];
     $columns = $_POST["columns"];
@@ -376,6 +372,8 @@ class CustomersController extends Controller
       );
       echo json_encode($response);
     } else if ($action_type === 'export') {
+      $get_customers = $this->customerModel->getCustomers($offset, $limit, $order_by, $where, true);
+      // print_r($get_customers);
       $this->exportCustomers($get_customers["data"]["customers"]);
     }
   }
@@ -395,8 +393,8 @@ class CustomersController extends Controller
         return "grandadmin_customer_id {$dir}, ";
         break;
 
-      case 'grandadmin_cusotomer_name':
-        return "grandadmin_cusotomer_name {$dir}, ";
+      case 'grandadmin_customer_name':
+        return "grandadmin_customer_name {$dir}, ";
         break;
 
       case 'offset_acct':
@@ -447,40 +445,36 @@ class CustomersController extends Controller
       
       $customerData = $_POST;
 
+      if (isset($_SESSION['admin_name'])) {
+        $customerData['updated_by'] = $_SESSION['admin_name'];
+      }
+
       // check id
       $check_customer_id = $this->customerModel->checkCustomerID($customerData['id']);
       if ($check_customer_id["status"] === "success" && $check_customer_id["data"] > 0) {
-        // check parent id
-        $check_parent_id = $this->customerModel->checkParentID($customerData["parent_id"]);
-        if ($check_parent_id["status"] === "success" && $check_parent_id["data"] > 0) {
-          // if main business == true --> reset all main business same parent id
-          // clear main business
-          if ($customerData['main_business'] == true || $customerData['main_business'] === 'true') {
-            $this->customerModel->resetMainBusiness($customerData['parent_id']);
-          }
-          $update_customer = $this->customerModel->updateCustomer($customerData);
-          if ($update_customer["status"] === 'success') {
-            $response = array(
-              "status" => "success",
-              "message" => "Updated"
-            );
-            echo json_encode($response);
-            exit;
-          } else {
-            $response = array(
-              "status" => "error",
-              "message" => "Customer update is failed"
-            );
-            echo json_encode($response);
-            exit;
-          }
+        // if main business == true --> reset all main business same parent id
+        // clear main business
+        if ($customerData['main_business'] == true || $customerData['main_business'] === 'true') {
+          $this->customerModel->resetMainBusiness($customerData['parent_id']);
+        }
+        
+        $update_customer = $this->customerModel->updateCustomer($customerData);
+        if ($update_customer["status"] === 'success') {
+          $response = array(
+            "status" => "success",
+            "message" => "Updated"
+          );
+          echo json_encode($response);
+          exit;
         } else {
           $response = array(
             "status" => "error",
-            "message" => "parent id not found"
+            "message" => "Customer update failed"
           );
           echo json_encode($response);
+          exit;
         }
+
       } else {
         $response = array(
           "status" => "error",

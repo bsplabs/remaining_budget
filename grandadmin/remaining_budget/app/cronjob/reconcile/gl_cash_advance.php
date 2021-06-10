@@ -15,6 +15,7 @@ class GlCashAdvance
     $gl_cash_advance_job = $this->getJob();
     $gl_cash_advance_job = $gl_cash_advance_job["data"];
     if($gl_cash_advance_job['gl_cash_advance'] == 'waiting'){
+      $this->updateStatus('in_progress',$gl_cash_advance_job["id"]);
       $gl_cash_advance_raw_data = $this->getRawData($gl_cash_advance_job['month'],$gl_cash_advance_job['year']);
       foreach($gl_cash_advance_raw_data["data"] as $gl_cash_advance){
         $gl_type = $gl_cash_advance["series_code"];
@@ -36,6 +37,7 @@ class GlCashAdvance
           $mark_reconcile = $this->markReconcile($gl_cash_advance["id"]);
         }
       }
+      $this->updateStatus('completed',$gl_cash_advance_job["id"]);
     }
   }
 
@@ -44,8 +46,8 @@ class GlCashAdvance
       $mainDB = $this->db->dbCon();
       $sql = "SELECT *
               FROM remaining_budget_report_status
-              WHERE overall_status != 'completed'
-              ORDER BY month,year Limit 1";
+              WHERE gl_cash_advance = 'waiting' AND overall_status = 'waiting' AND cash_advance = 'completed'
+              ORDER BY month,year,id Limit 1";
 
       $stmt = $mainDB->prepare($sql);
       $stmt->execute();
@@ -66,7 +68,7 @@ class GlCashAdvance
       $sql = "SELECT *
               FROM remaining_budget_gl_cash_advance
               WHERE month = :month and year = :year and is_reconcile = false
-              ORDER BY id limit 100;";
+              ORDER BY id LIMIT 5000;";
 
       $stmt = $mainDB->prepare($sql);
       $stmt->bindParam("month", $month);
@@ -88,7 +90,7 @@ class GlCashAdvance
 
       $mainDB = $this->db->dbCon();
       $sql = "UPDATE remaining_budget_report
-              SET receive = receive + :total
+              SET receive = receive + :total, is_reconcile = false
               WHERE remaining_budget_customer_id = :remaining_budget_id and month = :month and year = :year
               ";
 
@@ -114,7 +116,7 @@ class GlCashAdvance
 
       $mainDB = $this->db->dbCon();
       $sql = "UPDATE remaining_budget_report
-              SET invoice = invoice + :total
+              SET invoice = invoice + :total, is_reconcile = false
               WHERE remaining_budget_customer_id = :remaining_budget_id and month = :month and year = :year
               ";
 
@@ -140,7 +142,7 @@ class GlCashAdvance
 
       $mainDB = $this->db->dbCon();
       $sql = "UPDATE remaining_budget_report
-              SET ads_credit_note = ads_credit_note + :total
+              SET ads_credit_note = ads_credit_note + :total, is_reconcile = false
               WHERE remaining_budget_customer_id = :remaining_budget_id and month = :month and year = :year
               ";
 
@@ -168,6 +170,26 @@ class GlCashAdvance
               WHERE id = :id";
 
       $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("id", $id);
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = "";
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+  private function updateStatus($status,$id){
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "UPDATE remaining_budget_report_status SET gl_cash_advance = :status where id = :id";
+
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("status", $status);
       $stmt->bindParam("id", $id);
       $stmt->execute();
       $result["status"] = "success";

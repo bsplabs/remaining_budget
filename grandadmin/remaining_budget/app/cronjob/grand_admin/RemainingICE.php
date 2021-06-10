@@ -16,7 +16,7 @@ class RemainingICE
   {
     try {
       $mainDB = $this->db->dbCon();
-      $sql = "SELECT month, year FROM remaining_budget_report_status WHERE type = 'default' AND remaining_ice = 'pending' ORDER BY year ASC, month ASC Limit 1;";
+      $sql = "SELECT * FROM remaining_budget_report_status WHERE overall_status != 'completed' ORDER BY year ASC, month ASC, id ASC Limit 1;";
       $stmt = $mainDB->query($sql);
       $result["status"] = "success";
       $result["data"] = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -74,44 +74,71 @@ class RemainingICE
     return $result;
   }
 
+  public function updateReportStatusById($id, $resource_type, $status)
+  {
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "UPDATE remaining_budget_report_status SET {$resource_type} = '{$status}' WHERE id = :id";
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("id", $id);
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = "";
+
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
   public function run()
   {
     $primary_month = PRIMARY_MONTH;
     $primary_year = PRIMARY_YEAR;
-    $limit = 100;
+    $limit = 50;
 
     $get_month_year = $this->getMonthYearFromReportStatusTable();
     foreach ($get_month_year["data"] as $month_year_key => $month_year_val) 
     {
-      $month = $month_year_val['month'];  
-      $year = $month_year_val['year']; 
+      if($month_year_val["remaining_ice"] == 'pending'){
+        $month = $month_year_val['month'];  
+        $year = $month_year_val['year']; 
 
-      // $this->updateReportStatus($month, $year, "remaining_ice", "pending");
+        
+        $this->updateReportStatusById($month_year_val["id"], "remaining_ice", "in_progress");
 
-      // ========== Google Service
-      $service_name = "google";
-      $service_column = "AdwordsCusId";
-      // clear data before insert new
-      $this->clearRemainingICE($service_name, $month, $year);
-      $this->handleRemainingICEData($service_name, $service_column, $limit, $month, $year);
-      // echo "Get remaining ICE google finished \n\n";
+        // ========== Google Service
+        $service_name = "google";
+        $service_column = "AdwordsCusId";
+        // clear data before insert new
+        $this->clearRemainingICE($service_name, $month, $year);
+        $this->handleRemainingICEData($service_name, $service_column, $limit, $month, $year);
+        // echo "Get remaining ICE google finished \n\n";
 
-      // ========== Facebook Service
-      $service_name = "facebook";
-      $service_column = "FacebookID";
-      $this->clearRemainingICE($service_name, $month, $year);
-      $this->handleRemainingICEData($service_name, $service_column, $limit, $month, $year);
-      // echo "Get remaining ICE facebook finished \n\n";
+        // ========== Facebook Service
+        $service_name = "facebook";
+        $service_column = "FacebookID";
+        $this->clearRemainingICE($service_name, $month, $year);
+        $this->handleRemainingICEData($service_name, $service_column, $limit, $month, $year);
+        // echo "Get remaining ICE facebook finished \n\n";
 
-      // ========== Instagram Service
-      $service_name = "instagram";
-      $service_column = "InstagramID";
-      $this->clearRemainingICE($service_name, $month, $year);
-      $this->handleRemainingICEData($service_name, $service_column, $limit, $month, $year);
-      // echo "Get remaining ICE instagram finished \n\n";
+        // ========== Instagram Service
+        $service_name = "instagram";
+        $service_column = "InstagramID";
+        $this->clearRemainingICE($service_name, $month, $year);
+        $this->handleRemainingICEData($service_name, $service_column, $limit, $month, $year);
+        // echo "Get remaining ICE instagram finished \n\n";
 
-      // update report status after tasks finished
-      $this->updateReportStatus($month, $year, "remaining_ice", "waiting");
+        // update report status after tasks finished
+
+        $this->updateReportStatusById($month_year_val["id"], "remaining_ice", "waiting");
+        $is_last_process = $this->remainingBudgetCustomer->checkLastProcess($month_year_val["id"]);
+        if($is_last_process){
+          $this->updateReportStatusById($month_year_val["id"], "overall_status", "waiting");
+        }
+      }
     } 
 
   }
@@ -121,8 +148,8 @@ class RemainingICE
     $get_remaining_ice_data_first_time = $this->getRemainigICE($service_name, $month, $year, 0, $limit);
     if (!empty($get_remaining_ice_data_first_time) && $get_remaining_ice_data_first_time['status']) {
       $total = $get_remaining_ice_data_first_time['total'];
-      if ($total > 100) {
-        $loop = ceil($total / 100);
+      if ($total > $limit) {
+        $loop = ceil($total / $limit);
         // echo $loop;
         for ($i = 1; $i <= $loop; $i++) 
         {
@@ -198,9 +225,8 @@ class RemainingICE
 
   public function getRemainigICE($service, $month, $year, $offset, $limit)
   {
-    // echo "\n getRemainingICE ------> is running...  \n";
     $headers = array(
-      'Api-Access-Token: 9fc5faeff1e9e49bc2db82b4481ddc00',
+      "Api-Access-Token: " . ADPRO_ICE_API_TOKEN,
     );
 
     $post_request = array(
@@ -212,7 +238,7 @@ class RemainingICE
       "limit" => $limit
     );
 
-    $cURLConnection = curl_init('http://adproicedev.readyplanet.com/api/remaining_budget');
+    $cURLConnection = curl_init(ADPRO_ICE_REMAINING_BUDGET_URL);
     curl_setopt($cURLConnection, CURLOPT_HTTPHEADER, $headers);
     curl_setopt($cURLConnection, CURLOPT_POSTFIELDS, $post_request);
     curl_setopt($cURLConnection, CURLOPT_RETURNTRANSFER, true);

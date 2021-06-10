@@ -28,7 +28,8 @@ class Resource
                 campaign,
                 volume,
                 unit,
-                spending_total_price
+                spending_total_price,
+                updated_by
               )
               VALUES (
                 :remaining_budget_customer_id,
@@ -43,7 +44,8 @@ class Resource
                 :campaign,
                 :volume,
                 :unit,
-                :spending_total_price
+                :spending_total_price,
+                :updated_by
               )";
 
       $stmt = $mainDB->prepare($sql);
@@ -60,6 +62,7 @@ class Resource
       $stmt->bindParam("volume", $googleSpendingData["volume"]);
       $stmt->bindParam("unit", $googleSpendingData["unit"]);
       $stmt->bindParam("spending_total_price", $googleSpendingData["spending_total_price"]);
+      $stmt->bindParam("updated_by", $googleSpendingData["updated_by"]);
 
       $stmt->execute();
       $result["status"] = "success";
@@ -356,7 +359,8 @@ class Resource
                 billing_period,
                 currency,
                 payment_status,
-                spending_total_price
+                spending_total_price,
+                updated_by
               )
               VALUES (
                 :remaining_budget_customer_id,
@@ -368,7 +372,8 @@ class Resource
                 :billing_period,
                 :currency,
                 :payment_status,
-                :spending_total_price
+                :spending_total_price,
+                :updated_by
               )";
 
       $stmt = $mainDB->prepare($sql);
@@ -383,6 +388,7 @@ class Resource
       $stmt->bindParam("currency", $facebook_spending["currency"]);
       $stmt->bindParam("payment_status", $facebook_spending["payment_status"]);
       $stmt->bindParam("spending_total_price", $facebook_spending["spending_total_price"]);
+      $stmt->bindParam("updated_by", $facebook_spending["updated_by"]);
 
       $stmt->execute();
       $result["status"] = "success";
@@ -730,6 +736,7 @@ class Resource
               adjustment_max_note = :adjustment_max_note,
               adjustment_front_end = :adjustment_front_end,
               adjustment_front_end_note = :adjustment_front_end_note
+              updated_by = :updated_by
               WHERE month = :month
                 AND year = :year
                 AND id = :report_id
@@ -753,6 +760,7 @@ class Resource
       $stmt->bindParam("adjustment_max_note", $adjustment["adjustment_max_note"]);
       $stmt->bindParam("adjustment_front_end", $adjustment["adjustment_front_end"]);
       $stmt->bindParam("adjustment_front_end_note", $adjustment["adjustment_front_end_note"]);
+      $stmt->bindParam("updated_by", $adjustment["updated_by"]);
       $stmt->execute();
       $result["status"] = "success";
       $result["data"] = "";

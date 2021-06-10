@@ -15,6 +15,8 @@ class RemainingIce
     $remaining_ice_job = $this->getJob();
     $remaining_ice_job = $remaining_ice_job["data"];
     if($remaining_ice_job['remaining_ice'] == 'waiting'){
+      $this->updateStatus('in_progress',$remaining_ice_job["id"]);
+      $set_zero = $this->setZero($remaining_ice_job['month'],$remaining_ice_job['year']);
       $remaining_ice_raw_data = $this->getRawData($remaining_ice_job['month'],$remaining_ice_job['year']);
       foreach($remaining_ice_raw_data["data"] as $remaining_ice){
           $total = $remaining_ice["remaining_ice"];
@@ -26,6 +28,7 @@ class RemainingIce
             $mark_reconcile = $this->markReconcile($remaining_ice["id"]);
           }
       }
+      $this->updateStatus('completed',$remaining_ice_job["id"]);
     }
   }
 
@@ -34,8 +37,8 @@ class RemainingIce
       $mainDB = $this->db->dbCon();
       $sql = "SELECT *
               FROM remaining_budget_report_status
-              WHERE overall_status != 'completed'
-              ORDER BY month,year Limit 1";
+              WHERE remaining_ice = 'waiting' AND overall_status = 'waiting' AND cash_advance = 'completed'
+              ORDER BY month,year,id Limit 1";
 
       $stmt = $mainDB->prepare($sql);
       $stmt->execute();
@@ -53,10 +56,11 @@ class RemainingIce
   private function getRawData($month,$year){
     try {
       $mainDB = $this->db->dbCon();
-      $sql = "SELECT *
-              FROM remaining_budget_remaining_ice
-              WHERE month = :month and year = :year and is_reconcile = false
-              ORDER BY id";
+      $sql = "SELECT i.*
+              FROM remaining_budget_remaining_ice i left join remaining_budget_customers c
+              ON c.id = i.remaining_budget_customer_id
+              WHERE i.month = :month and i.year = :year and i.is_reconcile = false and c.payment_method = 'prepaid'
+              ORDER BY i.id";
 
       $stmt = $mainDB->prepare($sql);
       $stmt->bindParam("month", $month);
@@ -73,12 +77,35 @@ class RemainingIce
     return $result;
   }
 
+  private function setZero($month, $year){
+    try {
+
+      $mainDB = $this->db->dbCon();
+      $sql = "UPDATE remaining_budget_report
+              SET remaining_ice = 0, is_reconcile = false
+              WHERE month = :month and year = :year and remaining_ice != 0;";
+
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("month", $month);
+      $stmt->bindParam("year", $year);
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = "";
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
   private function moveToReport($total,$remaining_budget_id,$month,$year){
     try {
 
       $mainDB = $this->db->dbCon();
       $sql = "UPDATE remaining_budget_report
-              SET remaining_ice = remaining_ice + :total
+              SET remaining_ice = remaining_ice + :total, is_reconcile = false
               WHERE remaining_budget_customer_id = :remaining_budget_id and month = :month and year = :year
               ";
 
@@ -106,6 +133,26 @@ class RemainingIce
               WHERE id = :id";
 
       $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("id", $id);
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = "";
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+  private function updateStatus($status,$id){
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "UPDATE remaining_budget_report_status SET remaining_ice = :status where id = :id";
+
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("status", $status);
       $stmt->bindParam("id", $id);
       $stmt->execute();
       $result["status"] = "success";

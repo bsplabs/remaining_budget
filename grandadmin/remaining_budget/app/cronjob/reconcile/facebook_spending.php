@@ -14,8 +14,8 @@ class FacebookSpending
   public function run(){
     $facebook_spending_job = $this->getJob();
     $facebook_spending_job = $facebook_spending_job["data"];
-    print_r($facebook_spending_job);
     if($facebook_spending_job['facebook_spending'] == 'waiting'){
+      $this->updateStatus('in_progress',$facebook_spending_job["id"]);
       $facebook_spending_raw_data = $this->getRawData($facebook_spending_job['month'],$facebook_spending_job['year']);
       foreach($facebook_spending_raw_data["data"] as $facebook_spending){
           $total = $facebook_spending["spending_total_price"] * -1 ;
@@ -27,6 +27,7 @@ class FacebookSpending
             $mark_reconcile = $this->markReconcile($facebook_spending["id"]);
           }
       }
+      $this->updateStatus('completed',$facebook_spending_job["id"]);
     }
   }
 
@@ -35,8 +36,8 @@ class FacebookSpending
       $mainDB = $this->db->dbCon();
       $sql = "SELECT *
               FROM remaining_budget_report_status
-              WHERE overall_status = 'waiting'
-              ORDER BY month,year Limit 1";
+              WHERE facebook_spending = 'waiting' AND overall_status = 'waiting' AND cash_advance = 'completed'
+              ORDER BY month,year,id Limit 1";
 
       $stmt = $mainDB->prepare($sql);
       $stmt->execute();
@@ -57,7 +58,7 @@ class FacebookSpending
       $sql = "SELECT *
               FROM remaining_budget_facebook_spending
               WHERE month = :month and year = :year and is_reconcile = false
-              ORDER BY id limit 100;";
+              ORDER BY id";
 
       $stmt = $mainDB->prepare($sql);
       $stmt->bindParam("month", $month);
@@ -79,7 +80,7 @@ class FacebookSpending
 
       $mainDB = $this->db->dbCon();
       $sql = "UPDATE remaining_budget_report
-              SET spending_invoice = spending_invoice + :total
+              SET spending_invoice = spending_invoice + :total, is_reconcile = false
               WHERE remaining_budget_customer_id = :remaining_budget_id and month = :month and year = :year
               ";
 
@@ -119,8 +120,26 @@ class FacebookSpending
     $this->db->dbClose($mainDB);
     return $result;
   }
-  
 
+  private function updateStatus($status,$id){
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "UPDATE remaining_budget_report_status SET facebook_spending = :status where id = :id";
+
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("status", $status);
+      $stmt->bindParam("id", $id);
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = "";
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
   
 }
 

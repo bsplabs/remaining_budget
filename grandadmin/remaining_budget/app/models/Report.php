@@ -409,7 +409,8 @@ class Report
                 cumulative_balance_lc,
                 series_code,
                 month,
-                year
+                year,
+                updated_by
               )
               VALUES (
                 :remaining_budget_customer_id,
@@ -427,7 +428,8 @@ class Report
                 :cumulative_balance_lc,
                 :series_code,
                 :month,
-                :year
+                :year,
+                :updated_by
               )";
 
       $stmt = $mainDB->prepare($sql);
@@ -447,6 +449,7 @@ class Report
       $stmt->bindParam("series_code", $glCashAdvance["series_code"]);
       $stmt->bindParam("month", $glCashAdvance["month"]);
       $stmt->bindParam("year", $glCashAdvance["year"]);
+      $stmt->bindParam("updated_by", $glCashAdvance["updated_by"]);
 
       $stmt->execute();
 
@@ -476,6 +479,30 @@ class Report
 
       $result["status"] = "success";
       $result["data"] = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+  public function getNotCompletedReportStatus($month, $year)
+  {
+    try {
+      $mainDB = $this->db->dbCon();
+
+      $sql = "SELECT * FROM remaining_budget_report_status WHERE month = :month AND year = :year AND overall_status != 'completed';";
+
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("month", $month);
+      $stmt->bindParam("year", $year);
+      $stmt->execute();
+
+      $result["status"] = "success";
+      $result["data"] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     } catch (PDOException $e) {
       $result["status"] = "fail";
@@ -580,10 +607,15 @@ class Report
   {
     try {
       $mainDB = $this->db->dbCon();
-      $sql = "INSERT INTO remaining_budget_report_status (month, year) VALUES (:month, :year)";
+      $sql = "INSERT INTO remaining_budget_report_status (month, year, updated_by) VALUES (:month, :year, :updated_by)";
       $stmt = $mainDB->prepare($sql);
       $stmt->bindParam("month", $month);
       $stmt->bindParam("year", $year);
+      if (isset($_SESSION['admin_name'])) {
+        $stmt->bindParam('updated_by', $_SESSION['admin_name']);
+      } else {
+        $stmt->bindValue('updated_by', '');
+      }
 
       $stmt->execute();
 
@@ -602,8 +634,19 @@ class Report
   {
     try {
       $mainDB = $this->db->dbCon();
-      $sql = "UPDATE remaining_budget_report_status SET {$resource_type} = '{$status}' WHERE month = '{$month}' AND year = '{$year}' AND type = 'default'";
+      $sql = "UPDATE remaining_budget_report_status 
+              SET {$resource_type} = '{$status}',
+                  updated_at = NOW(),
+                  updated_by = :updated_by
+              WHERE month = '{$month}' 
+                AND year = '{$year}' 
+                AND type = 'default'";
       $stmt = $mainDB->prepare($sql);
+      if (isset($_SESSION['admin_name'])) {
+        $stmt->bindParam('updated_by', $_SESSION['admin_name']);
+      } else {
+        $stmt->bindValue('updated_by', '');
+      }
       $stmt->execute();
       $result["status"] = "success";
       $result["data"] = "";
@@ -635,7 +678,7 @@ class Report
     return $result;
   }
 
-  public function getReconcileData($year, $month)
+  public function getReconcileData($month, $year)
   {
     try {
       $mainDB = $this->db->dbCon();
@@ -643,10 +686,10 @@ class Report
       c.offset_acct,c.offset_acct_name,r.id as report_id,
       sum(r.last_month_remaining) as last_month_remaining, sum(r.adjustment_remain) as adjustment_remain, r.adjustment_remain_note, sum(r.receive) as `receive`, sum(r.invoice) as invoice, sum(r.transfer) as `transfer`,
       sum(r.ads_credit_note) as ads_credit_note, sum(r.spending_invoice) as spending_invoice, sum(r.adjustment_free_click_cost) as adjustment_free_click_cost, r.adjustment_free_click_cost_note, sum(r.adjustment_free_click_cost_old) as adjustment_free_click_cost_old,r.adjustment_free_click_cost_old_note,
-      sum(r.adjustment_cash_advance) as adjustment_cash_advance,r.adjustment_cash_advance,sum(r.adjustment_max) as adjustment_max,r.adjustment_max,sum(r.cash_advance) as cash_advance, sum(r.remaining_ice) as remaining_ice,
+      sum(r.adjustment_cash_advance) as adjustment_cash_advance,r.adjustment_cash_advance_note,sum(r.adjustment_max) as adjustment_max,r.adjustment_max_note,sum(r.cash_advance) as cash_advance, sum(r.remaining_ice) as remaining_ice,
       sum(r.wallet) as wallet, sum(r.wallet_free_click_cost) as wallet_free_click_cost, sum(r.withholding_tax) as withholding_tax, sum(r.adjustment_front_end) as adjustment_front_end,r.adjustment_front_end_note,
       sum(r.remaining_budget) as remaining_budget, sum(r.difference) as difference,r.note as note,
-      count(c.parent_id) as amount FROM remaining_budget_report r LEFT JOIN remaining_budget_customers c ON c.id = r.remaining_budget_customer_id WHERE r.year = :year and r.month = :month and c.parent_id is not null GROUP BY c.parent_id ORDER BY c.parent_id ASC LIMIT 100;";
+      count(c.parent_id) as amount FROM remaining_budget_report r LEFT JOIN remaining_budget_customers c ON c.id = r.remaining_budget_customer_id WHERE r.year = :year and r.month = :month and c.parent_id is not null GROUP BY c.parent_id ORDER BY c.parent_id ASC LIMIT 1000;";
       $stmt = $mainDB->prepare($sql);
       $stmt->bindParam("year", $year);
       $stmt->bindParam("month", $month);
@@ -661,14 +704,373 @@ class Report
     return $result;
   }
 
-  public function getReconcileDataByParent($parent_id)
+  public function getReconcileDataTable($month, $year, $start, $length,$order_column, $order_dir, $search, $filter)
+  {
+    try {
+      $condition_value = array();
+      $condition_signs = array("equal"=> "=", "less_than" => "<", "greater_than" => ">" , "not_equal" => "!=");
+      if($filter["filter_cash_advance"] != "" && !empty($condition_signs[$filter["filter_cash_advance_condition"]]) ){
+        $condition_value[] = "sum(cash_advance) ".$condition_signs[$filter["filter_cash_advance_condition"]]." :cash_advance";
+      }
+
+      if($filter["filter_remaining_budget"] != "" && !empty($condition_signs[$filter["filter_remaining_budget_condition"]]) ){
+        $condition_value[] = "sum(remaining_budget) ".$condition_signs[$filter["filter_remaining_budget_condition"]]." :remaining_budget";
+      }
+
+      if($filter["filter_difference"] != "" && !empty($condition_signs[$filter["filter_difference_condition"]]) ){
+        $condition_value[] = "sum(difference) ".$condition_signs[$filter["filter_difference_condition"]]." :difference";
+      }
+
+      if(empty($condition_value)){
+        $condition_having = "";
+      }else{
+        $condition_having = "HAVING ".join(" AND ", $condition_value);
+      }
+
+      $condition = "";
+
+      if(!empty($search)){
+        $condition .= "AND (";
+        $condition .= " c.parent_id like concat('%', :search, '%')";
+        $condition .= " OR c.grandadmin_customer_id like concat('%', :search, '%')";
+        $condition .= " OR c.grandadmin_customer_name like concat('%', :search, '%')";
+        $condition .= " OR c.offset_acct like concat('%', :search, '%')";
+        $condition .= " OR c.offset_acct_name like concat('%', :search, '%')";
+        $condition .= " OR c.company like concat('%', :search, '%')";
+        $condition .= " OR c.payment_method like concat('%', :search, '%')";
+        if(is_numeric(str_replace(",", "", $search))){
+          $condition .= " OR r.last_month_remaining = :search_number";
+          $condition .= " OR r.adjustment_remain = :search_number";
+          $condition .= " OR r.receive = :search_number";
+          $condition .= " OR r.invoice = :search_number";
+          $condition .= " OR r.transfer = :search_number";
+          $condition .= " OR r.ads_credit_note = :search_number";
+          $condition .= " OR r.spending_invoice = :search_number";
+          $condition .= " OR r.adjustment_free_click_cost = :search_number";
+          $condition .= " OR r.adjustment_free_click_cost_old = :search_number";
+          $condition .= " OR r.adjustment_cash_advance = :search_number";
+          $condition .= " OR r.adjustment_max = :search_number";
+          $condition .= " OR r.cash_advance = :search_number";
+          $condition .= " OR r.remaining_ice = :search_number";
+          $condition .= " OR r.wallet = :search_number";
+          $condition .= " OR r.wallet_free_click_cost = :search_number";
+          $condition .= " OR r.withholding_tax = :search_number";
+          $condition .= " OR r.adjustment_front_end = :search_number";
+          $condition .= " OR r.remaining_budget = :search_number";
+          $condition .= " OR r.difference = :search_number";
+        }
+        $condition .= " OR r.note like concat('%', :search, '%')";
+        $condition .= ")";
+      }
+      $mainDB = $this->db->dbCon();
+      $sql = "SELECT c.company as company,c.payment_method as payment_method,c.parent_id as parent_id,c.grandadmin_customer_id as grandadmin_customer_id,c.grandadmin_customer_name as grandadmin_customer_name,
+      c.offset_acct as offset_acct,c.offset_acct_name as offset_acct_name,r.id as report_id,
+      sum(r.last_month_remaining) as last_month_remaining, sum(r.adjustment_remain) as adjustment_remain, r.adjustment_remain_note, sum(r.receive) as `receive`, sum(r.invoice) as invoice, sum(r.transfer) as `transfer`,
+      sum(r.ads_credit_note) as ads_credit_note, sum(r.spending_invoice) as spending_invoice, sum(r.adjustment_free_click_cost) as adjustment_free_click_cost, r.adjustment_free_click_cost_note, sum(r.adjustment_free_click_cost_old) as adjustment_free_click_cost_old,r.adjustment_free_click_cost_old_note,
+      sum(r.adjustment_cash_advance) as adjustment_cash_advance,r.adjustment_cash_advance_note,sum(r.adjustment_max) as adjustment_max,r.adjustment_max_note,sum(r.cash_advance) as cash_advance, sum(r.remaining_ice) as remaining_ice,
+      sum(r.wallet) as wallet, sum(r.wallet_free_click_cost) as wallet_free_click_cost, sum(r.withholding_tax) as withholding_tax, sum(r.adjustment_front_end) as adjustment_front_end,r.adjustment_front_end_note,
+      sum(r.remaining_budget) as remaining_budget, sum(r.difference) as difference,r.note as note,
+      count(c.parent_id) as amount FROM remaining_budget_report r LEFT JOIN remaining_budget_customers c ON c.id = r.remaining_budget_customer_id WHERE r.year = :year and r.month = :month and c.parent_id is not null {$condition} GROUP BY parent_id {$condition_having} ORDER BY {$order_column} {$order_dir} LIMIT {$length} OFFSET {$start} ;";
+      
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("year", $year);
+      $stmt->bindParam("month", $month);
+      if(!empty($search)){
+        $stmt->bindParam("search",$search);
+        $stmt->bindParam("search_number",str_replace(",", "", $search));
+      }
+      if(strpos($sql, ":cash_advance") !== false){
+        $stmt->bindParam("cash_advance",$filter["filter_cash_advance"]);
+      }
+      if(strpos($sql, ":remaining_budget") !== false){
+        $stmt->bindParam("remaining_budget",$filter["filter_remaining_budget"]);
+      }
+      if(strpos($sql, ":difference") !== false){
+        $stmt->bindParam("difference",$filter["filter_difference"]);
+      }
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+  public function getReconcileSumParent($month, $year, $parent_id)
+  {
+    try {
+      
+      $mainDB = $this->db->dbCon();
+      $sql = "SELECT c.company as company,c.payment_method as payment_method,c.parent_id as parent_id,c.grandadmin_customer_id as grandadmin_customer_id,c.grandadmin_customer_name as grandadmin_customer_name,
+      c.offset_acct as offset_acct,c.offset_acct_name as offset_acct_name,r.id as report_id,
+      sum(r.last_month_remaining) as last_month_remaining, sum(r.adjustment_remain) as adjustment_remain, r.adjustment_remain_note, sum(r.receive) as `receive`, sum(r.invoice) as invoice, sum(r.transfer) as `transfer`,
+      sum(r.ads_credit_note) as ads_credit_note, sum(r.spending_invoice) as spending_invoice, sum(r.adjustment_free_click_cost) as adjustment_free_click_cost, r.adjustment_free_click_cost_note, sum(r.adjustment_free_click_cost_old) as adjustment_free_click_cost_old,r.adjustment_free_click_cost_old_note,
+      sum(r.adjustment_cash_advance) as adjustment_cash_advance,r.adjustment_cash_advance_note,sum(r.adjustment_max) as adjustment_max,r.adjustment_max_note,sum(r.cash_advance) as cash_advance, sum(r.remaining_ice) as remaining_ice,
+      sum(r.wallet) as wallet, sum(r.wallet_free_click_cost) as wallet_free_click_cost, sum(r.withholding_tax) as withholding_tax, sum(r.adjustment_front_end) as adjustment_front_end,r.adjustment_front_end_note,
+      sum(r.remaining_budget) as remaining_budget, sum(r.difference) as difference,r.note as note,
+      count(c.parent_id) as amount FROM remaining_budget_report r LEFT JOIN remaining_budget_customers c ON c.id = r.remaining_budget_customer_id WHERE r.year = :year and r.month = :month and c.parent_id = :parent_id GROUP BY parent_id LIMIT 1;";
+      
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("year", $year);
+      $stmt->bindParam("month", $month);
+      $stmt->bindParam("parent_id", $parent_id);
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+  public function getReconcileDataTable2($month, $year, $start, $length,$order_column, $order_dir, $search, $filter)
+  {
+    try {
+      $condition = "";
+      $condition_signs = array("equal"=> "=", "less_than" => "<", "greater_than" => ">" , "not_equal" => "!=");
+      if($filter["filter_cash_advance"] != "" && !empty($condition_signs[$filter["filter_cash_advance_condition"]]) ){
+        $condition .= " AND cash_advance ".$condition_signs[$filter["filter_cash_advance_condition"]]." :cash_advance";
+      }
+
+      if($filter["filter_remaining_budget"] != "" && !empty($condition_signs[$filter["filter_remaining_budget_condition"]]) ){
+        $condition .= "AND remaining_budget ".$condition_signs[$filter["filter_remaining_budget_condition"]]." :remaining_budget";
+      }
+
+      if($filter["filter_difference"] != "" && !empty($condition_signs[$filter["filter_difference_condition"]]) ){
+        $condition .= "AND difference ".$condition_signs[$filter["filter_difference_condition"]]." :difference";
+      }
+
+      if(!empty($search)){
+        $condition .= "AND (";
+        $condition .= " c.parent_id like concat('%', :search, '%')";
+        $condition .= " OR c.grandadmin_customer_id like concat('%', :search, '%')";
+        $condition .= " OR c.grandadmin_customer_name like concat('%', :search, '%')";
+        $condition .= " OR c.offset_acct like concat('%', :search, '%')";
+        $condition .= " OR c.offset_acct_name like concat('%', :search, '%')";
+        $condition .= " OR c.company like concat('%', :search, '%')";
+        $condition .= " OR c.payment_method like concat('%', :search, '%')";
+        $condition .= ")";
+      }
+      $mainDB = $this->db->dbCon();
+      $sql = "SELECT c.company as company,c.payment_method as payment_method,c.parent_id as parent_id,c.grandadmin_customer_id as grandadmin_customer_id,c.grandadmin_customer_name as grandadmin_customer_name,
+      c.offset_acct as offset_acct,c.offset_acct_name as offset_acct_name,r.id as report_id,
+      r.last_month_remaining as last_month_remaining, r.adjustment_remain as adjustment_remain, r.adjustment_remain_note, r.receive as `receive`, r.invoice as invoice, r.transfer as `transfer`,
+      r.ads_credit_note as ads_credit_note, r.spending_invoice as spending_invoice, r.adjustment_free_click_cost as adjustment_free_click_cost, r.adjustment_free_click_cost_note, r.adjustment_free_click_cost_old as adjustment_free_click_cost_old,r.adjustment_free_click_cost_old_note,
+      r.adjustment_cash_advance as adjustment_cash_advance,r.adjustment_cash_advance_note,r.adjustment_max as adjustment_max,r.adjustment_max_note,r.cash_advance as cash_advance, r.remaining_ice as remaining_ice,
+      r.wallet as wallet, r.wallet_free_click_cost as wallet_free_click_cost, r.withholding_tax as withholding_tax, r.adjustment_front_end as adjustment_front_end,r.adjustment_front_end_note,
+      r.remaining_budget as remaining_budget, r.difference as difference,r.note as note
+      FROM remaining_budget_report r LEFT JOIN remaining_budget_customers c ON c.id = r.remaining_budget_customer_id WHERE r.year = :year and r.month = :month and c.parent_id is not null {$condition} ORDER BY {$order_column} {$order_dir} LIMIT {$length} OFFSET {$start} ;";
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("year", $year);
+      $stmt->bindParam("month", $month);
+      if(!empty($search)){
+        $stmt->bindParam("search",$search);
+      }
+      if(strpos($sql, ":cash_advance") !== false){
+        $stmt->bindParam("cash_advance",$filter["filter_cash_advance"]);
+      }
+      if(strpos($sql, ":remaining_budget") !== false){
+        $stmt->bindParam("remaining_budget",$filter["filter_remaining_budget"]);
+      }
+      if(strpos($sql, ":difference") !== false){
+        $stmt->bindParam("difference",$filter["filter_difference"]);
+      }
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+  public function getCountReconcileDataTable($month, $year, $start, $length,$order_column, $order_dir, $search, $filter)
+  {
+    try {
+      $condition_value = array();
+      $condition_signs = array("equal"=> "=", "less_than" => "<", "greater_than" => ">" , "not_equal" => "!=");
+      if($filter["filter_cash_advance"] != "" && !empty($condition_signs[$filter["filter_cash_advance_condition"]]) ){
+        $condition_value[] = "sum(cash_advance) ".$condition_signs[$filter["filter_cash_advance_condition"]]." :cash_advance";
+      }
+
+      if($filter["filter_remaining_budget"] != "" && !empty($condition_signs[$filter["filter_remaining_budget_condition"]]) ){
+        $condition_value[] = "sum(remaining_budget) ".$condition_signs[$filter["filter_remaining_budget_condition"]]." :remaining_budget";
+      }
+
+      if($filter["filter_difference"] != "" && !empty($condition_signs[$filter["filter_difference_condition"]]) ){
+        $condition_value[] = "sum(difference) ".$condition_signs[$filter["filter_difference_condition"]]." :difference";
+      }
+
+      if(empty($condition_value)){
+        $condition_having = "";
+      }else{
+        $condition_having = "HAVING ".join(" AND ", $condition_value);
+      }
+
+      $condition = "";
+
+      if(!empty($search)){
+        $condition .= "AND (";
+        $condition .= " c.parent_id like concat('%', :search, '%')";
+        $condition .= " OR c.grandadmin_customer_id like concat('%', :search, '%')";
+        $condition .= " OR c.grandadmin_customer_name like concat('%', :search, '%')";
+        $condition .= " OR c.offset_acct like concat('%', :search, '%')";
+        $condition .= " OR c.offset_acct_name like concat('%', :search, '%')";
+        $condition .= " OR c.company like concat('%', :search, '%')";
+        $condition .= " OR c.payment_method like concat('%', :search, '%')";
+        if(is_numeric(str_replace(",", "", $search))){
+          $condition .= " OR r.last_month_remaining = :search_number";
+          $condition .= " OR r.adjustment_remain = :search_number";
+          $condition .= " OR r.receive = :search_number";
+          $condition .= " OR r.invoice = :search_number";
+          $condition .= " OR r.transfer = :search_number";
+          $condition .= " OR r.ads_credit_note = :search_number";
+          $condition .= " OR r.spending_invoice = :search_number";
+          $condition .= " OR r.adjustment_free_click_cost = :search_number";
+          $condition .= " OR r.adjustment_free_click_cost_old = :search_number";
+          $condition .= " OR r.adjustment_cash_advance = :search_number";
+          $condition .= " OR r.adjustment_max = :search_number";
+          $condition .= " OR r.cash_advance = :search_number";
+          $condition .= " OR r.remaining_ice = :search_number";
+          $condition .= " OR r.wallet = :search_number";
+          $condition .= " OR r.wallet_free_click_cost = :search_number";
+          $condition .= " OR r.withholding_tax = :search_number";
+          $condition .= " OR r.adjustment_front_end = :search_number";
+          $condition .= " OR r.remaining_budget = :search_number";
+          $condition .= " OR r.difference = :search_number";
+        }
+        $condition .= " OR r.note like concat('%', :search, '%')";
+        $condition .= ")";
+      }
+      $mainDB = $this->db->dbCon();
+      $sql = "SELECT count(*) FROM remaining_budget_report r LEFT JOIN remaining_budget_customers c ON c.id = r.remaining_budget_customer_id WHERE r.year = :year and r.month = :month and c.parent_id is not null {$condition} GROUP BY parent_id {$condition_having} ;";
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("year", $year);
+      $stmt->bindParam("month", $month);
+      if(!empty($search)){
+        $stmt->bindParam("search",$search);
+        $stmt->bindParam("search_number",str_replace(",", "", $search));
+      }
+      if(strpos($sql, ":cash_advance") !== false){
+        $stmt->bindParam("cash_advance",$filter["filter_cash_advance"]);
+      }
+      if(strpos($sql, ":remaining_budget") !== false){
+        $stmt->bindParam("remaining_budget",$filter["filter_remaining_budget"]);
+      }
+      if(strpos($sql, ":difference") !== false){
+        $stmt->bindParam("difference",$filter["filter_difference"]);
+      }
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+  public function getTotalReconcileData($month, $year){
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "SELECT count(distinct(c.parent_id)) as total FROM remaining_budget_report r LEFT JOIN remaining_budget_customers c ON c.id = r.remaining_budget_customer_id WHERE r.year = :year and r.month = :month;";
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("year", $year);
+      $stmt->bindParam("month", $month);
+      $stmt->execute();
+      $result["status"] = "success";
+      $result_tmp = $stmt->fetch(PDO::FETCH_ASSOC);
+      $result["data"] = $result_tmp["total"];
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+  public function getReportChildren($month, $year, $parent_id, $search, $filter)
+  {
+    try {
+      $condition = "";
+      $condition_signs = array("equal"=> "=", "less_than" => "<", "greater_than" => ">" , "not_equal" => "!=");
+      if($filter["filter_cash_advance"] != "" && !empty($condition_signs[$filter["filter_cash_advance_condition"]]) ){
+        $condition .= " AND cash_advance ".$condition_signs[$filter["filter_cash_advance_condition"]]." :cash_advance";
+      }
+
+      if($filter["filter_remaining_budget"] != "" && !empty($condition_signs[$filter["filter_remaining_budget_condition"]]) ){
+        $condition .= "AND remaining_budget ".$condition_signs[$filter["filter_remaining_budget_condition"]]." :remaining_budget";
+      }
+
+      if($filter["filter_difference"] != "" && !empty($condition_signs[$filter["filter_difference_condition"]]) ){
+        $condition .= "AND difference ".$condition_signs[$filter["filter_difference_condition"]]." :difference";
+      }
+
+      if(!empty($search)){
+        $condition .= "AND (";
+        $condition .= " c.parent_id like concat('%', :search, '%')";
+        $condition .= " OR c.grandadmin_customer_id like concat('%', :search, '%')";
+        $condition .= " OR c.grandadmin_customer_name like concat('%', :search, '%')";
+        $condition .= " OR c.offset_acct like concat('%', :search, '%')";
+        $condition .= " OR c.offset_acct_name like concat('%', :search, '%')";
+        $condition .= " OR c.company like concat('%', :search, '%')";
+        $condition .= " OR c.payment_method like concat('%', :search, '%')";
+        $condition .= ")";
+      }
+      $mainDB = $this->db->dbCon();
+      $sql = "SELECT c.company as company,c.payment_method as payment_method,c.parent_id as parent_id,c.grandadmin_customer_id as grandadmin_customer_id,c.grandadmin_customer_name as grandadmin_customer_name,
+      c.offset_acct as offset_acct,c.offset_acct_name as offset_acct_name,r.id as report_id,
+      r.last_month_remaining as last_month_remaining, r.adjustment_remain as adjustment_remain, r.adjustment_remain_note, r.receive as `receive`, r.invoice as invoice, r.transfer as `transfer`,
+      r.ads_credit_note as ads_credit_note, r.spending_invoice as spending_invoice, r.adjustment_free_click_cost as adjustment_free_click_cost, r.adjustment_free_click_cost_note, r.adjustment_free_click_cost_old as adjustment_free_click_cost_old,r.adjustment_free_click_cost_old_note,
+      r.adjustment_cash_advance as adjustment_cash_advance,r.adjustment_cash_advance_note,r.adjustment_max as adjustment_max,r.adjustment_max_note,r.cash_advance as cash_advance, r.remaining_ice as remaining_ice,
+      r.wallet as wallet, r.wallet_free_click_cost as wallet_free_click_cost, r.withholding_tax as withholding_tax, r.adjustment_front_end as adjustment_front_end,r.adjustment_front_end_note,
+      r.remaining_budget as remaining_budget, r.difference as difference,r.note as note
+      FROM remaining_budget_report r LEFT JOIN remaining_budget_customers c ON c.id = r.remaining_budget_customer_id WHERE r.year = :year and r.month = :month and c.parent_id = :parent_id {$condition}  ORDER BY r.id ;";
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("year", $year);
+      $stmt->bindParam("month", $month);
+      $stmt->bindParam("parent_id", $parent_id);
+      if(!empty($search)){
+        $stmt->bindParam("search",$search);
+      }
+      if(strpos($sql, ":cash_advance") !== false){
+        $stmt->bindParam("cash_advance",$filter["filter_cash_advance"]);
+      }
+      if(strpos($sql, ":remaining_budget") !== false){
+        $stmt->bindParam("remaining_budget",$filter["filter_remaining_budget"]);
+      }
+      if(strpos($sql, ":difference") !== false){
+        $stmt->bindParam("difference",$filter["filter_difference"]);
+      }
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+  public function getReconcileDataByParent($parent_id,$month,$year)
   {
     try {
       $mainDB = $this->db->dbCon();
       $sql = "SELECT *,r.id as report_id FROM remaining_budget_report r LEFT JOIN remaining_budget_customers c 
-      ON c.id = r.remaining_budget_customer_id WHERE c.parent_id = :parent_id ORDER BY c.id ASC";
+      ON c.id = r.remaining_budget_customer_id WHERE c.parent_id = :parent_id AND month = :month AND year = :year ORDER BY c.id ASC";
       $stmt = $mainDB->prepare($sql);
       $stmt->bindParam("parent_id", $parent_id);
+      $stmt->bindParam("month", $month);
+      $stmt->bindParam("year", $year);
       $stmt->execute();
       $result["status"] = "success";
       $result["data"] = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -684,7 +1086,7 @@ class Report
   {
     try {
       $mainDB = $this->db->dbCon();
-      $sql = "SELECT * FROM remaining_budget_report r  WHERE r.id = :report_id limit 1 ";
+      $sql = "SELECT * FROM remaining_budget_report r LEFT JOIN remaining_budget_customers c ON c.id = r.remaining_budget_customer_id WHERE r.id = :report_id limit 1 ";
       $stmt = $mainDB->prepare($sql);
       $stmt->bindParam("report_id", $report_id);
       $stmt->execute();
@@ -698,19 +1100,43 @@ class Report
     return $result;
   }
 
+  public function checkExistReportId($report_id)
+  {
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "SELECT count(*) as total FROM remaining_budget_report WHERE r.id = :report_id;";
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("report_id", $report_id);
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = $stmt->fetch(PDO::FETCH_ASSOC);
+      if($result["data"]["total"] > 0){
+        $result = false;
+      }else{
+        $result = true;
+      }
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
   
-  public function updateReportData($report_id,$value,$note,$type)
+  public function updateReportData($report_id,$value,$note,$type, $updated_by)
   {
     $types = array("adjustment_remain","adjustment_free_click_cost","adjustment_free_click_cost_old","adjustment_cash_advance", "adjustment_max", "adjustment_front_end");
     $type_note = $type."_note";
     try {
       if(in_array($type,$types)){
         $mainDB = $this->db->dbCon();
-        $sql = "UPDATE remaining_budget_report SET {$type} = :value, {$type_note} = :note where id = :report_id;";
+        $sql = "UPDATE remaining_budget_report SET {$type} = :value, {$type_note} = :note, updated_at = NOW(), updated_by = :updated_by where id = :report_id;";
         $stmt = $mainDB->prepare($sql);
         $stmt->bindParam("value", $value);
         $stmt->bindParam("note", $note);
         $stmt->bindParam("report_id", $report_id);
+        $stmt->bindParam("updated_by", $updated_by);
         $stmt->execute();
         $result["status"] = "success";
         $result["data"] = "";
@@ -732,12 +1158,23 @@ class Report
   {
     try {
       $mainDB = $this->db->dbCon();
-      $sql = "UPDATE remaining_budget_report SET cash_advance = :cash_advance, remaining_budget = :remaining_budget, `difference` = :difference where id = :report_id;";
+      $sql = "UPDATE remaining_budget_report 
+              SET cash_advance = :cash_advance, 
+                  remaining_budget = :remaining_budget, 
+                  `difference` = :difference,
+                  updated_at = NOW(),
+                  updated_by = :updated_by
+              WHERE id = :report_id;";
       $stmt = $mainDB->prepare($sql);
       $stmt->bindParam("cash_advance", $cash_advance);
       $stmt->bindParam("remaining_budget", $remaining_budget);
       $stmt->bindParam("difference", $difference);
       $stmt->bindParam("report_id", $report_id);
+      if (isset($_SESSION['admin_name'])) {
+        $stmt->bindParam("updated_by", $report_id);
+      } else {
+        $stmt->bindValue("updated_by", "");
+      }
       $stmt->execute();
       $result["status"] = "success";
       $result["data"] = "";
@@ -750,60 +1187,82 @@ class Report
     return $result;
   }
 
-  public function getReportByQuery($filter_cash_advance,$filter_remaining_budget,$filter_difference,$search,$condition)
+  public function getReportParentId($month, $year, $search, $filter)
   {
-    $result["header"] = array(
-      "Remaining Budget ID", "Parent ID", "Customer ID", "Custormer Name", "Customer Acct", "Customer Acct Name",
-    "Company", "Payment Method", "Remaining ทางบัญชี", "Adjust ยอดยกมา", "หมายเหตุ adjust ยอดยกมา" ,"Receive", "Invoice", "Transfer (โอนเงินระหว่างบัญชี)",
-    "คืนเงินค่าโฆษณา",
-    "Spending (-)",
-    "JE + Free Clickcost",
-    "หมายเหตุ JE + Free Clickcost",
-    "Free Clickcost (ค่าใช้จ่ายต้องห้าม)",
-    "หมายเหตุ Free Clickcost (ค่าใช้จ่ายต้องห้าม)",
-    "Adjustment",
-    "หมายเหตุ Adjustment",
-    "Max",
-    "หมายเหตุ Max",
-    "Cash Advance",
-    "Remaining ICE",
-          "Wallet",
-          "Wallet - Free Clickcost (-)",
-          "Withholding Tax",
-          "Adjust",
-          "หมายเหตุ Adjust",
-          "Remaining Budget",
-          "Difference",
-          "Note"
-    );
     try {
-      $mainDB = $this->db->dbCon();
-      $sql = "SELECT r.id,c.parent_id,c.grandadmin_customer_id,c.grandadmin_customer_name,c.offset_acct,c.offset_acct_name,c.company,c.payment_method,
-      r.last_month_remaining,r.adjustment_remain,r.adjustment_remain_note,r.receive,r.invoice,r.transfer,r.ads_credit_note,
-      r.spending_invoice as spending,r.adjustment_free_click_cost,r.adjustment_free_click_cost_note,r.adjustment_free_click_cost_old,r.adjustment_free_click_cost_old_note,
-      r.adjustment_cash_advance,r.adjustment_cash_advance_note,r.adjustment_max,r.adjustment_max_note,r.cash_advance,
-      r.remaining_ice,r.wallet,r.wallet_free_click_cost,r.withholding_tax,r.adjustment_front_end,r.adjustment_front_end_note,r.remaining_budget,
-      r.difference,r.note FROM remaining_budget_report r LEFT JOIN remaining_budget_customers c ON r.remaining_budget_customer_id = c.id";
-      if($condition != ""){
-        $sql .= " WHERE ".$condition;
+      $condition_value = array();
+      $condition_signs = array("equal"=> "=", "less_than" => "<", "greater_than" => ">" , "not_equal" => "!=");
+      if($filter["filter_cash_advance"] != "" && !empty($condition_signs[$filter["filter_cash_advance_condition"]]) ){
+        $condition_value[] = "sum(cash_advance) ".$condition_signs[$filter["filter_cash_advance_condition"]]." :cash_advance";
       }
-      $sql .= " Limit 50";
 
+      if($filter["filter_remaining_budget"] != "" && !empty($condition_signs[$filter["filter_remaining_budget_condition"]]) ){
+        $condition_value[] = "sum(remaining_budget) ".$condition_signs[$filter["filter_remaining_budget_condition"]]." :remaining_budget";
+      }
+
+      if($filter["filter_difference"] != "" && !empty($condition_signs[$filter["filter_difference_condition"]]) ){
+        $condition_value[] = "sum(difference) ".$condition_signs[$filter["filter_difference_condition"]]." :difference";
+      }
+
+      if(empty($condition_value)){
+        $condition_having = "";
+      }else{
+        $condition_having = "HAVING ".join(" AND ", $condition_value);
+      }
+
+      $condition = "";
+
+      if(!empty($search)){
+        $condition .= "AND (";
+        $condition .= " c.parent_id like concat('%', :search, '%')";
+        $condition .= " OR c.grandadmin_customer_id like concat('%', :search, '%')";
+        $condition .= " OR c.grandadmin_customer_name like concat('%', :search, '%')";
+        $condition .= " OR c.offset_acct like concat('%', :search, '%')";
+        $condition .= " OR c.offset_acct_name like concat('%', :search, '%')";
+        $condition .= " OR c.company like concat('%', :search, '%')";
+        $condition .= " OR c.payment_method like concat('%', :search, '%')";
+        if(is_numeric(str_replace(",", "", $search))){
+          $condition .= " OR r.last_month_remaining = :search_number";
+          $condition .= " OR r.adjustment_remain = :search_number";
+          $condition .= " OR r.receive = :search_number";
+          $condition .= " OR r.invoice = :search_number";
+          $condition .= " OR r.transfer = :search_number";
+          $condition .= " OR r.ads_credit_note = :search_number";
+          $condition .= " OR r.spending_invoice = :search_number";
+          $condition .= " OR r.adjustment_free_click_cost = :search_number";
+          $condition .= " OR r.adjustment_free_click_cost_old = :search_number";
+          $condition .= " OR r.adjustment_cash_advance = :search_number";
+          $condition .= " OR r.adjustment_max = :search_number";
+          $condition .= " OR r.cash_advance = :search_number";
+          $condition .= " OR r.remaining_ice = :search_number";
+          $condition .= " OR r.wallet = :search_number";
+          $condition .= " OR r.wallet_free_click_cost = :search_number";
+          $condition .= " OR r.withholding_tax = :search_number";
+          $condition .= " OR r.adjustment_front_end = :search_number";
+          $condition .= " OR r.remaining_budget = :search_number";
+          $condition .= " OR r.difference = :search_number";
+        }
+        $condition .= " OR r.note like concat('%', :search, '%')";
+        $condition .= ")";
+      }
+      $mainDB = $this->db->dbCon();
+      $sql = "SELECT c.parent_id as parent_id FROM remaining_budget_report r LEFT JOIN remaining_budget_customers c ON c.id = r.remaining_budget_customer_id WHERE r.year = :year and r.month = :month and c.parent_id is not null {$condition} GROUP BY parent_id {$condition_having};";
+      
       $stmt = $mainDB->prepare($sql);
-      if($condition != ""){
-        if($filter_cash_advance != ""){
-          $stmt->bindParam("cash_advance", $filter_cash_advance);
-        }
-        if($filter_remaining_budget != ""){
-          $stmt->bindParam("remaining_budget", $filter_remaining_budget);
-        }
-        if($filter_difference != ""){
-          $stmt->bindParam("difference", $filter_difference);
-        }
-        if($search != ""){
-          $stmt->bindParam("search", $search);
-        }
-        
+      $stmt->bindParam("year", $year);
+      $stmt->bindParam("month", $month);
+      if(!empty($search)){
+        $stmt->bindParam("search",$search);
+        $stmt->bindParam("search_number",str_replace(",", "", $search));
+      }
+      if(strpos($sql, ":cash_advance") !== false){
+        $stmt->bindParam("cash_advance",$filter["filter_cash_advance"]);
+      }
+      if(strpos($sql, ":remaining_budget") !== false){
+        $stmt->bindParam("remaining_budget",$filter["filter_remaining_budget"]);
+      }
+      if(strpos($sql, ":difference") !== false){
+        $stmt->bindParam("difference",$filter["filter_difference"]);
       }
       $stmt->execute();
       $result["status"] = "success";
@@ -819,7 +1278,7 @@ class Report
 
   public function createUpdateWorker($input_type,$month,$year,$updated_by){
     try {
-      $types = array("cash_advance","media_wallet","withholding_tax", "free_click_cost", "google_spending",
+      $types = array("media_wallet","withholding_tax", "free_click_cost", "google_spending",
       "facebook_spending","remaining_ice", "gl_cash_advance","transfer");
       $mainDB = $this->db->dbCon();
 
@@ -864,6 +1323,7 @@ class Report
       $stmt = $mainDB->prepare($sql);
       $stmt->bindParam("month", $month);
       $stmt->bindParam("year", $year);
+      $stmt->bindValue("cash_advance", 'completed');
       foreach ($types as $type){
         if($input_type == $type){
           $stmt->bindValue($type, 'pending');
@@ -914,6 +1374,26 @@ class Report
     return $result;
   }
 
+  public function getUserClosed($month, $year)
+  {
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "SELECT created_by FROM remaining_budget_close_period where month = :month and year = :year LIMIT 1";
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("month", $month);
+      $stmt->bindParam("year", $year);
+      $stmt->execute();
+      $result_data = $stmt->fetch(PDO::FETCH_ASSOC);
+      $result["status"] = "success";
+      $result['data'] = $result_data;
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
   function closePeriod($month, $year, $created_by)
   {
     try {
@@ -956,16 +1436,19 @@ class Report
     return $result;
   }
 
-  public function updateReportNote($report_id, $report_note)
+  public function updateReportNote($report_id, $report_note, $updated_by)
   {
     try {
       $mainDB = $this->db->dbCon();
       $sql = "UPDATE remaining_budget_report 
-              SET note = :note
+              SET note = :note,
+                  updated_at = NOW(),
+                  updated_by = :updated_by
               WHERE id = :report_id;";
       $stmt = $mainDB->prepare($sql);
       $stmt->bindParam("note", $report_note);
       $stmt->bindParam("report_id", $report_id);
+      $stmt->bindParam("updated_by", $updated_by);
       $stmt->execute();
       $result["status"] = "success";
       $result["data"] = "";

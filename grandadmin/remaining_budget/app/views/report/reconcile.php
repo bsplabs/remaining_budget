@@ -13,9 +13,20 @@ var is_closed = "<?php echo $data["is_closed"];?>";
 <div class="container-fluid report-reconcile-page">
   <br>
   <!-- MONTH/YEAR SELECTION -->
-  <div class="row justify-content-end">
-    <div class="col-md-9"><h2>Reconcile Management</h2></div>
+  <div class="row justify-content-end mb-3">
+    <div class="col-md-9">
+      <h2 style="margin-bottom: 0;">
+        Media Reconciliations Management <?php echo $data['is_closed'] ? "(Read-only)" : ""; ?>
+      </h2>
+      <?php 
+        if ($data['is_closed']) {
+          echo "<small style='font-size: 100% !important;'>Closed by " . $data['closed_by'] . "</small>";
+        }
+      ?>
+    </div>
+
     <div class="col-md-3">
+
     <select class="form-control" aria-label="" id="month-year-selector">
       <?php 
           foreach ($data["month_year_lists"] as $key => $my) { 
@@ -31,59 +42,68 @@ var is_closed = "<?php echo $data["is_closed"];?>";
   </div>
   <!--  -->
   <div class="row">
-    <div class="col-md-5">
-    <!-- <button id="reconcile_quick_view_btn" class="btn btn-reset" data-bs-toggle="modal" role="button"><i class='bx bx-columns'></i></button>
-    <button id="reconcile_full_view_btn" class="btn btn-reset" data-bs-toggle="modal" role="button"><i class='bx bx-table'></i></button> -->
-      <label id="filter-container-btn" style="cursor:pointer;"><i class='bx bx-filter-alt'></i> Filter </label>
-      <div id="filter-container">
-        <div class="form-inline" style="padding-top:10px;">
-          <label style="padding-right:33px;">Cash Advance</label>
-          <select class="form-control form-control-sm" id="filter_cash_advance_condition">
-            <option value="equal">Equal</option>
-            <option value="less_than">Less than</option>
-            <option value="greater_than">Greater than</option>
-            <option value="not_equal">Not equal</option>
-          </select>
-          <input id="filter_cash_advance" style="margin-left:10px;" class="form-control form-control-sm" type="text" placeholder="">
+    <div class="col-md-6">
+      <!--  -->
+      <label id="filter-container-btn" style="cursor:pointer;"><i class='bx bx-filter-alt'></i> Filter <i id="filter_expand_icon" class='bx bx-chevron-down'></i></label>
+      <div class="row" id="filter-container" style="display:none;">
+        <div class="col-md-12 border-right1">
+          <div>
+            <div class="form-inline" style="padding-top:0px;">
+              <label style="padding-right:33px;">Cash Advance</label>
+              <select class="form-control form-control-sm" id="filter_cash_advance_condition">
+                <option value="equal">Equal</option>
+                <option value="less_than">Less than</option>
+                <option value="greater_than">Greater than</option>
+                <option value="not_equal">Not equal</option>
+              </select>
+              <input id="filter_cash_advance" style="margin-left:10px;" class="form-control form-control-sm" type="text" placeholder="">
+            </div>
+
+            <div class="form-inline" style="padding-top:10px;">
+              <label style="padding-right:10px;">Remaining Budget</label>
+              <select class="form-control form-control-sm" id="filter_remaining_budget_condition">
+                <option value="equal">Equal</option>
+                <option value="less_than">Less than</option>
+                <option value="greater_than">Greater than</option>
+                <option value="not_equal">Not equal</option>
+              </select>
+              <input id="filter_remaining_budget" style="margin-left:10px;" class="form-control form-control-sm" type="text" placeholder="">
+            </div>
+
+            <div class="form-inline" style="padding-top:10px;">
+              <label style="padding-right:55px;">Difference</label>
+              <select class="form-control form-control-sm" id="filter_difference_condition">
+                <option value="equal">Equal</option>
+                <option value="less_than">Less than</option>
+                <option value="greater_than">Greater than</option>
+                <option value="not_equal">Not equal</option>
+              </select>
+              <input id="filter_difference" style="margin-left:10px;" class="form-control form-control-sm" type="text" placeholder="">
+            </div>
+            <div class="form-inline" style="padding-top:10px;"><small style="color:red;display:none;" id="filter_error_message">Value shold be a Number.</small></div>
+          </div>
         </div>
-        <div class="form-inline" style="padding-top:10px;">
-          <label style="padding-right:10px;">Remaining Budget</label>
-          <select class="form-control form-control-sm" id="filter_remaining_budget_condition">
-            <option value="equal">Equal</option>
-            <option value="less_than">Less than</option>
-            <option value="greater_than">Greater than</option>
-            <option value="not_equal">Not equal</option>
-          </select>
-          <input id="filter_remaining_budget" style="margin-left:10px;" class="form-control form-control-sm" type="text" placeholder="">
-        </div>
-        <div class="form-inline" style="padding-top:10px;">
-          <label style="padding-right:55px;">Difference</label>
-          <select class="form-control form-control-sm" id="filter_difference_condition">
-            <option value="equal">Equal</option>
-            <option value="less_than">Less than</option>
-            <option value="greater_than">Greater than</option>
-            <option value="not_equal">Not equal</option>
-          </select>
-          <input id="filter_difference" style="margin-left:10px;" class="form-control form-control-sm" type="text" placeholder="">
-        </div>
-        <div class="col-md-12">
-          <button style="margin:10px 5px;" id="apply_filter" class="btn btn-add btn-sm pull-right" data-bs-toggle="modal" role="button"><i class='bx bx-filter-alt'></i>Apply</button>
-          <button style="margin:10px 5px;"id="reset_filter" class="btn btn-reset btn-sm pull-right" data-bs-toggle="modal" role="button"><i class='bx bx-reset' ></i>Reset</button>
+
+        <div class="col-md-12 col-xs-6" style="padding-top: 10px;">
+          <button style="margin:0px 5px;"id="reset_filter" class="btn btn-reset btn-sm " data-bs-toggle="modal" role="button"><i class='bx bx-reset' ></i>Reset</button>
+          <button style="margin:0px 0px 0px 5px;" id="apply_filter" class="btn btn-add btn-sm " data-bs-toggle="modal" role="button"><i class='bx bx-filter-alt'></i>Apply</button>
+          
         </div>
       </div>
+ 
     </div>
-    <div class="col-md-2"></div>
-    <div class="col-md-5 text-right">
+
+    <div class="col-md-6 text-right">
       <?php if(!$data["is_closed"]): ?>
-        <button id="reconcile_add_replace_btn" class="btn btn-add btn-sm" data-bs-toggle="modal" href="#modal" role="button"><i class='bx bx-add-to-queue'></i> Add / Replace</button>
-        <button id="reconcile_close_period" class="btn btn-export btn-sm" style="margin-left: 5px;" data-bs-toggle="modal" role="button"><i class='bx bx-list-check'></i> Close Period</button>
+        <button id="reconcile_add_replace_btn" class="btn btn-add btn-sm" style="margin-bottom: 5px;" data-bs-toggle="modal" href="#modal" role="button"><i class='bx bx-add-to-queue'></i> Add / Replace</button>
+        <button id="reconcile_close_period" class="btn btn-export btn-sm" style="margin-left: 5px;margin-bottom: 5px;" data-bs-toggle="modal" role="button"><i class='bx bx-list-check'></i> Close Period</button>
       <?php endif; ?>
-      <button id="reconcile_export_btn" class="btn btn-export btn-sm" style="margin-left: 5px;" data-bs-toggle="modal" role="button"><i class='bx bx-export'></i> Export</button>
+      <button id="reconcile_export_btn" class="btn btn-export btn-sm" style="margin-left: 5px;margin-bottom: 5px;" data-bs-toggle="modal" role="button"><i class='bx bx-export'></i> Export</button>
       
     </div>
   </div>
   
-  <div class="mt-3">
+  <div class="mt-3" id="reconcile_table_wrapper">
     <table class="table table-bordered text-nowrap table-hover" id="report_reconcile_table">
       <!-- COLGROUP -->
       <colgroup>
@@ -192,7 +212,6 @@ var is_closed = "<?php echo $data["is_closed"];?>";
       <tbody id="reconcile_content">
       </tbody>
     </table>
-    <div id="reconcile_content_loading">loading...</div>
   </div>
 
   <!-- First modal dialog -->
@@ -206,7 +225,6 @@ var is_closed = "<?php echo $data["is_closed"];?>";
           <form enctype="multipart/form-data" class="pt-3" id="reconcile_add_replace_form">
             <!--  -->
             <div class="mb-4">
-              
                 <label for="file-re-upload-selector" class="form-label">Choose input type</label>
                 <select class="form-control" id="file-re-upload-selector" name="file-re-upload-selector">
                   <option selected value="gl_revenue">GL Revenue (Receive)</option>
@@ -214,20 +232,19 @@ var is_closed = "<?php echo $data["is_closed"];?>";
                   <option value="facebook_spending">FaceBook Spending</option>
                   <option value="transfer">Transfer</option>
                   <option value="adjustment">Adjustment</option>
-                  <!-- <option value="adjust_remain">Adjust ยอดยกมา</option>
-                  <option value="adjust_accounting">Adjust Accounting</option>
-                  <option value="adjust_frontend">Adjust Other System</option> -->
                   <option value="apis">APIs</option>
                 </select>
-              
             </div>
             <!--  -->
+            <p class="mb-2"><a id="example-file-link" href="<?php echo BASE_URL . '/temp/example/gl_cash_advance_example.xlsx'; ?>">ตัวอย่างไฟล์</a></p>
+
             <div class="mb-3" id="input-file-upload">
               <div class="upload-container">
                 <div class="border-container">
-                  <input type="file" id="reconcile_add_replace_file" name="reconcile_add_replace_file" class="form-control">
+                  <input type="file" id="reconcile_add_replace_file" name="reconcile_add_replace_file" class="form-control" style="height: 100% !important;">
                 </div>
               </div>
+              <small id="file_extension_message">File extension support only .xls, .xlsx</small>
             </div>
             <!--  -->
             <div class="border p-3" id="checkbox-api-group" style="display: none;">
@@ -259,11 +276,12 @@ var is_closed = "<?php echo $data["is_closed"];?>";
             </div>
             <!--  -->
           </form>
+          <small id="add_replace_error_message" style="color:red;display:none;"></small>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          <button type="submit" class="btn btn-primary" id="re-upload-file-button" data-bs-target="#modal2" data-bs-toggle="modal" data-bs-dismiss="modal">Upload</button>
-          <button class="btn btn-primary" id="get-and-update-button" style="display: none;" data-bs-target="#modal2" data-bs-toggle="modal" data-bs-dismiss="modal">Get and Update Data</button>
+          <button type="button" class="btn btn-reset" id="re-upload-file-close-button" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-add" id="re-upload-file-button" data-bs-target="#modal2" data-bs-toggle="modal" data-bs-dismiss="modal" data-loading-text="<i class='fa fa-circle-o-notch fa-spin'></i> Uploading...">Upload</button>
+          <button class="btn btn-add" id="get-and-update-button" style="display: none;" data-bs-target="#modal2" data-bs-toggle="modal" data-bs-dismiss="modal">Get and Update Data</button>
         </div>
       </div>
     </div>
@@ -293,8 +311,8 @@ var is_closed = "<?php echo $data["is_closed"];?>";
           </form>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-          <button type="button" class="btn btn-primary">Save</button>
+          <button type="button" class="btn btn-reset" data-bs-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-add">Save</button>
         </div>
       </div>
     </div>
@@ -321,8 +339,8 @@ var is_closed = "<?php echo $data["is_closed"];?>";
       </div>
 
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary d-flex align-items-center" id="editReconcileNoteBtnSubmit">
+        <button type="button" class="btn btn-reset" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-add d-flex align-items-center" id="editReconcileNoteBtnSubmit">
           <span class="spinner-button spinner-border spinner-border-sm hide" role="status" aria-hidden="true"></span>
           <span class="text-button ml-2">Save changes</span>
         </button>
@@ -339,11 +357,13 @@ var is_closed = "<?php echo $data["is_closed"];?>";
         <small><b>customer name: </b></small><small id ="edit_able_customer_name"></small>
       </div>
       <div class="modal-body">
-      <div class="form-group">
+      <div class="form-group" id="form-group-input-numeric">
         <label id="edit_able_value_label" for="edit_able_value">Adjust ยอดยกมา</label>
         <input type="text" class="form-control text-right" id="edit_able_value">
         <input type="hidden" class="form-control text-right" id="edit_able_type">
         <input type="hidden" class="form-control text-right" id="edit_able_report_id">
+        <input type="hidden" class="form-control text-right" id="edit_able_row_id">
+        <div class="error-message hide">* Please enter only numeric</div>
       </div>
       <div class="form-group">
         <label for="edit_able_note">Note</label>
@@ -351,8 +371,8 @@ var is_closed = "<?php echo $data["is_closed"];?>";
       </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary" id="edit_able_submit">Save changes</button>
+        <button type="button" class="btn btn-reset" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-add" id="edit_able_submit">Save changes</button>
       </div>
     </div>
   </div>
@@ -371,17 +391,17 @@ var is_closed = "<?php echo $data["is_closed"];?>";
         </div>
         <!-- footer -->
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-dismiss="modal">No</button>
-          <button type="button" class="btn btn-danger" id="confirmClosePeriodButton">
+          <button type="button" class="btn btn-reset" data-dismiss="modal">No</button>
+          <button type="button" class="btn btn-add" id="confirmClosePeriodButton">
             <span class="spinner-button spinner-border spinner-border-sm hide" role="status" aria-hidden="true"></span>
-            <span class="text-button ml-2">Yes</span>
+            <span class="text-button">Yes</span>
           </button>
         </div>  
         <!--  -->
       </div>
     </div>
   </div>
-  <div class="loader-overlay">
+  <div class="loader-overlay" style="display:none;">
     <div class="spinner-border text-dark spinner-loader" role="status">
       <span class="sr-only">Loading...</span>
     </div>
@@ -399,11 +419,75 @@ var is_closed = "<?php echo $data["is_closed"];?>";
   </div>
 </div>
 
+<!-- Modal -->
+<div class="modal fade" id="modal-error-reporting" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+    <div class="modal-content">
+      <!--  -->
+      <div class="modal-header">
+        <h5 class="modal-title">Error Reporting - <span id="modal-resource-name"></span></h5>
+      </div>
+      <!--  -->
+      <div class="modal-body">
+        <!-- Assign value : resource type -->
+        <input type="hidden" value="" id="re-import-resource-type">
+        <!-- Table display result -->
+        <table class="table table-striped">
+          <thead>
+            <tr>
+              <th scope="col"></th>
+              <th scope="col" class="text-right">Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">Total</th>
+              <td class="text-muted text-right" id="total"></td>
+            </tr>
+            <tr>
+              <th scope="row">Valid</th>
+              <td class="text-success text-right" id="valid-total"></td>
+            </tr>
+            <tr>
+              <th scope="row">Invalid <span class="error-type-lists"></span></th>
+              <td class="text-danger text-right" id="invalid-total"></td>
+            </tr>
+          </tbody>
+        </table>
+        <div id="message-suggestion">
+          <span class="message-suggestion__gl-cash-advance text-danger hide">
+            ** Please check in your Excel file.
+          </span>
+          <span class="message-suggestion__facebook-spending text-danger hide">
+            ** Please check billing_period column in your CSV file.
+          </span>
+        </div>
+      </div>
+      <!--  -->
+      <div class="modal-footer">
+        <button type="button" class="btn btn-export" data-dismiss="modal">Edit file & Re-import</button>
+        <button type="button" class="btn btn-add" id="re-import-ignore-invalid-btn">Skip invalid data & Continue to import valid data</button>
+      </div>
+      <!--  -->
+    </div>
+  </div>
+</div>
+<!-- End Modal -->
+
+<!-- Spinner -->
+<div class="reconcile-overlay">
+  <div class="spanner">
+    <div class="loader"></div>
+    <p id="message_loading">Exporting data. please wait...</p>
+  </div>
+</div>
 
 <?php require_once APPROOT . "/views/layout/script.php"; ?>
 
 <script src="<?php echo BASE_URL; ?>/public/vendors/datatables_bootstrap4/jquery.dataTables.min.js"></script>
 <script src="<?php echo BASE_URL; ?>/public/vendors/datatables_bootstrap4/dataTables.bootstrap4.min.js"></script>
 <script src="<?php echo BASE_URL; ?>/public/vendors/datatables_bootstrap4/dataTables.fixedColumns.min.js"></script>
+<script src="<?php echo BASE_URL; ?>/public/vendors/datatables_bootstrap4/dataTables.rowGroup.min.js"></script>
 <script src="<?php echo BASE_URL; ?>/public/vendors/popper.min.js"></script>
 <script src="<?php echo BASE_URL; ?>/public/js/report/reconcile.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/numeral.js/2.0.6/numeral.min.js"></script>

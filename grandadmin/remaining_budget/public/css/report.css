@@ -24,7 +24,7 @@
 }
 
 .resource-box {
-  height: 15rem !important;
+  height: 17rem !important;
 }
 
 .upload-transfer-file-ready,
@@ -43,7 +43,7 @@
 .resource-box__icon,
 .resource-box__icon,
 .resource-box__icon {
-  font-size: 5rem;
+  font-size: 6rem;
 }
 .resource-box__icon .processing {
   color: #FDD65E;
@@ -111,17 +111,17 @@
   color: red !important;
 }
 
-.edit-able{
+tbody .edit-able, tbody .reconcile-note{
   cursor: pointer;
   position: relative;
 }
-.edit-able:hover{
+tbody .edit-able:hover{
   border: 1px solid #adb5bd !important;
 }
-.edit-able > .bx-pencil{
+.edit-able > .bx-pencil, .reconcile-note > .bx-pencil{
   position: absolute;
   left: 5px;
-  top: 2px;
+  top: calc(50% - 9px);
   font-size: 16px;
 }
 
@@ -139,4 +139,48 @@
 
 .more-note-td{
   position: relative;
+}
+
+.dt-body-right{
+  text-align: right;
+}
+
+.table td, .table th{
+  padding: .45rem;
+}
+.reconcile-note {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  width: 300px;
+}
+
+.more-children-data{
+  cursor: pointer;
+}
+
+.children-tr{
+  background-color: #f2747412;
+}
+
+.dataTables_scrollHead{
+  position: -webkit-sticky!important;
+  position: sticky!important;
+  top: 0;
+  background-color: white;
+  z-index: 100;
+}
+
+.reconcile-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  display: none;
+  background: #2a2a2a55;
+}
+
+.reconcile-overlay-active {
+  display: block;
+  z-index: 1050;
 }

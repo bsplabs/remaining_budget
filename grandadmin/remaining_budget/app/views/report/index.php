@@ -12,7 +12,7 @@
   <br>
   <!-- MONTH/YEAR SELECTION -->
   <div class="row justify-content-end">
-    <div class="col-md-9"><h2>Reconcile Management</h2></div>
+    <div class="col-md-9"><h2>Media Reconciliations Management</h2></div>
     <div class="col-md-3">
       <select class="form-control" aria-label="" id="month-year-selector">
         <?php 
@@ -142,6 +142,8 @@
               <h6 class="card-subtitle mb-2 text-muted text-danger">File extension support only .xlsx, .xls</h6>
               <form enctype="multipart/form-data" class="pt-3 mt-2" id="gl-cash-advance-form">
                 <div class="mb-3">
+                  <p class="mb-2"><a id="example-file-link" href="<?php echo BASE_URL . '/temp/example/gl_cash_advance_example.xlsx'; ?>">ตัวอย่างไฟล์</a></p>
+
                   <div class="upload-container">
                     <div class="border-container">
                       <input type="file" id="cash-advance-input-file" name="cashAdvanceInputFile" class="form-control" accept=".xls,.xlsx" style="height: 100%">
@@ -149,7 +151,7 @@
                   </div>
                 </div>
                 <div class="d-flex justify-content-center">
-                  <button type="submit" id="submit" name="importCashAdvanceButton" class="btn btn-primary d-flex" style="align-items: center;">
+                  <button type="submit" id="submit" name="importCashAdvanceButton" class="btn btn-add d-flex" style="align-items: center;">
                     <span class="spinner-button spinner-border spinner-border-sm hide" role="status" aria-hidden="true"></span>
                     <span class="text-button ml-2">Import</span>
                   </button>
@@ -196,6 +198,8 @@
               <h6 class="card-subtitle mb-2 text-muted">File extension support only .csv</h6>
               <form enctype="multipart/form-data" class="pt-3" id="google-spending-form">
                 <div class="mb-3">
+                  <p class="mb-2"><a id="example-file-link" href="<?php echo BASE_URL . '/temp/example/google_spending_example.csv'; ?>">ตัวอย่างไฟล์</a></p>
+                  
                   <div class="upload-container">
                     <div class="border-container">
                       <input type="file" id="google-spending-input-file" name="googleSpendingInputFile" class="form-control" accept=".csv" style="height: 100%">
@@ -203,7 +207,7 @@
                   </div>
                 </div>
                 <div class="d-flex justify-content-center">
-                  <button type="submit" id="submit" name="importGoogleSpendingButton" class="btn btn-primary d-flex align-items-center">
+                  <button type="submit" id="submit" name="importGoogleSpendingButton" class="btn btn-add d-flex align-items-center">
                     <span class="spinner-button spinner-border spinner-border-sm hide" role="status" aria-hidden="true"></span>
                     <span class="text-button ml-2">Import</span>
                   </button>
@@ -250,6 +254,8 @@
               <h6 class="card-subtitle mb-2 text-muted">File extension support only .csv</h6>
               <form enctype="multipart/form-data" class="pt-3" id="facebook-spending-form">
                 <div class="mb-3">
+                  <p class="mb-2"><a id="example-file-link" href="<?php echo BASE_URL . '/temp/example/facebook_spending_example.csv'; ?>">ตัวอย่างไฟล์</a></p>
+
                   <div class="upload-container">
                     <div class="border-container">
                       <input type="file" id="facebook-spending-input-file" name="facebookSpendingInputFile" class="form-control" accept=".csv" style="height: 100%">
@@ -257,7 +263,7 @@
                   </div>
                 </div>
                 <div class="d-flex justify-content-center">
-                  <button type="submit" id="submit" name="importFacebookSpendingButton" class="btn btn-primary d-flex align-items-center">
+                  <button type="submit" id="submit" name="importFacebookSpendingButton" class="btn btn-add d-flex align-items-center">
                     <span class="spinner-button spinner-border spinner-border-sm hide" role="status" aria-hidden="true"></span>
                     <span class="text-button ml-2">Import</span>
                   </button>
@@ -295,7 +301,7 @@
           <div class="card-body">
           <!-- Header -->
             <div class="d-flex justify-content-between">
-              <h5 class="card-title">Transfer</h5>
+              <h5 class="card-title">Transfer<small> (optional)</small></h5>
               <i class='bx bx-edit text-muted re-upload-file' style="display: none; cursor: pointer; font-size: 22px;"></i>
             </div>
 
@@ -304,6 +310,8 @@
               <h6 class="card-subtitle mb-2 text-muted">File extension support only .csv</h6>
               <form enctype="multipart/form-data" class="pt-3" id="upload_transfer_file_form">
                 <div class="mb-3">
+                  <p class="mb-2"><a id="example-file-link" href="<?php echo BASE_URL . '/temp/example/wallet_transfer_example.csv'; ?>">ตัวอย่างไฟล์</a></p>
+
                   <div class="upload-container">
                     <div class="border-container">
                       <input type="file" id="transfer-file-upload" name="transferInputFile" class="form-control" accept=".csv" style="height: 100%">
@@ -311,12 +319,12 @@
                   </div>
                 </div>
                 <div class="d-flex justify-content-center">
-                  <button type="submit" id="submit" name="import" class="btn btn-primary d-flex align-items-center">
+                  <button type="submit" id="submit" name="import" class="btn btn-add d-flex align-items-center">
                     <span class="spinner-button spinner-border spinner-border-sm hide" role="status" aria-hidden="true"></span>
                     <span class="text-button ml-2">Import</span>
                   </button>
                   <span class="d-flex justify-content-center align-items-center ml-3 hide cancel-re-upload-file">
-                    <a href="#" style="font-size: 16px;padding-top: 1px;" class>__action
+                    <a href="#" style="font-size: 16px;padding-top: 1px;" class="cancel-re-upload-file__action">
                       <i class="bx bx-reset"></i> Cancel
                     </a>
                   </span>
@@ -409,8 +417,8 @@
       </div>
       <!--  -->
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-dismiss="modal">Edit file & Re-import</button>
-        <button type="button" class="btn btn-primary" id="re-import-ignore-invalid-btn">Skip invalid data & Continue to import valid data</button>
+        <button type="button" class="btn btn-export" data-dismiss="modal">Edit file & Re-import</button>
+        <button type="button" class="btn btn-add" id="re-import-ignore-invalid-btn">Skip invalid data & Continue to import valid data</button>
       </div>
       <!--  -->
     </div>

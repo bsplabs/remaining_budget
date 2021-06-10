@@ -58,6 +58,12 @@ class ReportsController extends Controller
       $is_closed = $this->reportModel->checkClosed($data["month"],$data["year"]);
       if($is_closed["status"] == "success"){
         $data["is_closed"] = $is_closed["data"];
+        $get_closed_by = $this->reportModel->getUserClosed($data["month"],$data["year"]);
+        if ($get_closed_by['status'] === 'success' && !empty($get_closed_by['data'])) {
+          $data['closed_by'] = $get_closed_by['data']['created_by'];
+        } else {
+          $data['closed_by'] = '';
+        }
       }else{
         $data["is_closed"] = false;
       }
@@ -102,7 +108,78 @@ class ReportsController extends Controller
     if ($_SERVER["REQUEST_METHOD"] === "POST") {
       $year = $_POST['year'];
       $month = $_POST['month'];
-      $reconcile_data = $this->reportModel->getReconcileData($year, $month);
+      $reconcile_data = $this->reportModel->getReconcileData($month, $year);
+      $return = $reconcile_data;
+      echo json_encode($return);
+    }
+  }
+
+  public function getReportDataTable()
+  {
+    header("Content-Type: application/json");
+    if ($_SERVER["REQUEST_METHOD"] === "POST") {
+      $year = $_POST['year'];
+      $month = $_POST['month'];
+      $start = $_POST['start'];
+      $length = $_POST['length'];
+      $draw = $_POST['draw'];
+      $order = $_POST["order"];
+      $columns = $_POST["columns"];
+      $search = $_POST["search"];
+      $search = $search["value"];
+      $order_dir = $order[0]["dir"];
+      $order_column = $columns[$order[0]["column"]]["data"];
+      $filter = array();
+      $filter["filter_cash_advance"] = $_POST["filter_cash_advance"];
+      $filter["filter_remaining_budget"] = $_POST["filter_remaining_budget"];
+      $filter["filter_difference"] = $_POST["filter_difference"];
+      $filter["filter_cash_advance_condition"] = $_POST["filter_cash_advance_condition"];
+      $filter["filter_remaining_budget_condition"] = $_POST["filter_remaining_budget_condition"];
+      $filter["filter_difference_condition"] = $_POST["filter_difference_condition"];
+
+      $total = $this->reportModel->getTotalReconcileData($month, $year);
+      $recordsFiltered = $this->reportModel->getCountReconcileDataTable($month, $year, $start, $length, $order_column, $order_dir, $search, $filter);
+      $reconcile_data = $this->reportModel->getReconcileDataTable($month, $year, $start, $length, $order_column, $order_dir, $search, $filter);
+      $reconcile_list = array();
+      if($reconcile_data["status"] == "success"){
+        foreach($reconcile_data["data"] as $key => $report){
+          $children = $this->reportModel->getReconcileDataByParent($report["parent_id"],$month, $year);
+          $total_children = count($children["data"]);
+          if( $total_children > 1){
+            $report = $this->reportModel->getReconcileSumParent($month, $year, $report["parent_id"]);
+            $report["amount"] = $total_children;
+            $reconcile_list[] = $report["data"];
+            foreach($children["data"] as $child){
+              $child["amount"] = 0;
+              $reconcile_list[] = $child;
+            }
+          }else{
+            $reconcile_list[] = $report;
+          }
+        }
+      }
+      
+      $return = array("draw"=> $draw,"recordsTotal"=> $total["data"], "recordsFiltered"=> count($recordsFiltered["data"]), "data"=>$reconcile_list);
+      echo json_encode($return);
+    }
+  }
+
+  public function getReportChildren()
+  {
+    header("Content-Type: application/json");
+    if ($_SERVER["REQUEST_METHOD"] === "POST") {
+      $year = $_POST['year'];
+      $month = $_POST['month'];
+      $parent_id = $_POST["parent_id"];
+      $search = $_POST["search"];
+      $filter = array();
+      $filter["filter_cash_advance"] = $_POST["filter_cash_advance"];
+      $filter["filter_remaining_budget"] = $_POST["filter_remaining_budget"];
+      $filter["filter_difference"] = $_POST["filter_difference"];
+      $filter["filter_cash_advance_condition"] = $_POST["filter_cash_advance_condition"];
+      $filter["filter_remaining_budget_condition"] = $_POST["filter_remaining_budget_condition"];
+      $filter["filter_difference_condition"] = $_POST["filter_difference_condition"];
+      $reconcile_data = $this->reportModel->getReportChildren($month, $year, $parent_id, $search, $filter);
       echo json_encode($reconcile_data);
     }
   }
@@ -112,7 +189,9 @@ class ReportsController extends Controller
     header("Content-Type: application/json");
     if ($_SERVER["REQUEST_METHOD"] === "POST") {
       $parent_id = $_POST['parent_id'];
-      $reconcile_data = $this->reportModel->getReconcileDataByParent($parent_id);
+      $month = $_POST['month'];
+      $year = $_POST['year'];
+      $reconcile_data = $this->reportModel->getReconcileDataByParent($parent_id,$month, $year);
       echo json_encode($reconcile_data);
     }
   }
@@ -125,9 +204,11 @@ class ReportsController extends Controller
       $note = $_POST['note'];
       $type = $_POST['type'];
       $report_id = $_POST['report_id'];
-      $reconcile_data = $this->reportModel->updateReportData($report_id, $value, $note, $type);
+      $updated_by = $_SESSION['admin_name'];
+      $reconcile_data = $this->reportModel->updateReportData($report_id, $value, $note, $type, $updated_by);
       $re_calculate = $this->reCalculate($report_id);
-      echo json_encode($reconcile_data);
+      $report_data = $this->reportModel->getReconcileDataByReportId($report_id);
+      echo json_encode($report_data);
     }
   }
 
@@ -137,7 +218,7 @@ class ReportsController extends Controller
     $reconcile_data = $reconcile_data["data"];
     $cash_advance = $reconcile_data['last_month_remaining'] + $reconcile_data['adjustment_remain'] + $reconcile_data['receive'] + $reconcile_data['invoice'] + $reconcile_data['transfer'] + $reconcile_data['ads_credit_note'] + $reconcile_data['spending_invoice'] + $reconcile_data['adjustment_free_click_cost'] + $reconcile_data['adjustment_free_click_cost_old'] + $reconcile_data['adjustment_cash_advance'] + $reconcile_data['adjustment_max'];
     $remaining_budget = $reconcile_data['remaining_ice'] + $reconcile_data['wallet'] + $reconcile_data['wallet_free_click_cost'] + $reconcile_data['withholding_tax'] + $reconcile_data['adjustment_front_end'];
-    $difference = $remaining_budget - $cash_advance;
+    $difference = $cash_advance - $remaining_budget;
 
     $reconcile_data = $this->reportModel->updateReconcileReCalculateByReportId($report_id, $cash_advance, $remaining_budget, $difference);
   }
@@ -199,55 +280,92 @@ class ReportsController extends Controller
       header( 'Content-Type: text/csv' );
       header( 'Content-Disposition: attachment;filename='.$filename);
       $fp = fopen('php://output', 'w');
-      $filter_cash_advance_condition = $_POST["filter_cash_advance_condition"];
-      $filter_cash_advance = $_POST["filter_cash_advance"];
-      $filter_remaining_budget_condition = $_POST["filter_remaining_budget_condition"];
-      $filter_remaining_budget = $_POST["filter_remaining_budget"];
-      $filter_difference_condition = $_POST["filter_difference_condition"];
-      $filter_difference = $_POST["filter_difference"];
+      $filter = array();
+      $filter["filter_cash_advance"] = $_POST["filter_cash_advance"];
+      $filter["filter_remaining_budget"] = $_POST["filter_remaining_budget"];
+      $filter["filter_difference"] = $_POST["filter_difference"];
+      $filter["filter_cash_advance_condition"] = $_POST["filter_cash_advance_condition"];
+      $filter["filter_remaining_budget_condition"] = $_POST["filter_remaining_budget_condition"];
+      $filter["filter_difference_condition"] = $_POST["filter_difference_condition"];
       $search = $_POST["search"];
-
-      $condition_signs = array("equal"=> "=", "less_than" => "<", "greater_than" => ">" , "not_equal" => "!=");
-      $condition = "";
-      if($filter_cash_advance != "" && !empty($condition_signs[$filter_cash_advance_condition]) ){
-        $condition .= "cash_advance ".$condition_signs[$filter_cash_advance_condition]." :cash_advance";
-      }else{
-        $filter_cash_advance = "";
-      }
-
-      if($filter_remaining_budget != "" && !empty($condition_signs[$filter_remaining_budget_condition])){
-        if($condition!=""){
-          $condition .= " AND ";
-        }
-        $condition .= "remaining_budget ".$condition_signs[$filter_remaining_budget_condition]." :remaining_budget";
-      }else{
-        $filter_remaining_budget = "";
-      }
-
-      if($filter_difference != "" && !empty($condition_signs[$filter_difference_condition])){
-        if($condition!=""){
-          $condition .= " AND ";
-        }
-        $condition .= "difference ".$condition_signs[$filter_difference_condition]." :difference";
-      }else{
-        $filter_difference = "";
-      }
-
-      if($search != "" ){
-        if($condition!=""){
-          $condition .= " AND ";
-        }
-        $condition .= "c.parent_id like concat('%', :search, '%') ";
-      }else{
-        $search = "";
-      }
-    
+      $month = $_POST["month"];
+      $year = $_POST["year"];
   
-      $results = $this->reportModel->getReportByQuery($filter_cash_advance,$filter_remaining_budget,$filter_difference,$search,$condition);
+  
+      $results = $this->reportModel->getReportParentId($month, $year, $search, $filter);
   
       if($results["status"] == "success"){
-        fputcsv($fp, $results["header"]);
-        foreach ($results["data"] as $data){
+        $report_header = array(
+          "Report ID", "Parent ID", "Customer ID", "Custormer Name", "Customer Acct", "Customer Acct Name",
+        "Company", "Payment Method", "Remaining ทางบัญชี", "Adjust ยอดยกมา", "หมายเหตุ adjust ยอดยกมา" ,"Receive", "Invoice", "Transfer (โอนเงินระหว่างบัญชี)",
+        "คืนเงินค่าโฆษณา",
+        "Spending (-)",
+        "JE + Free Clickcost",
+        "หมายเหตุ JE + Free Clickcost",
+        "Free Clickcost (ค่าใช้จ่ายต้องห้าม)",
+        "หมายเหตุ Free Clickcost (ค่าใช้จ่ายต้องห้าม)",
+        "Adjustment",
+        "หมายเหตุ Adjustment",
+        "Max",
+        "หมายเหตุ Max",
+        "Cash Advance",
+        "Remaining ICE",
+        "Wallet",
+        "Wallet - Free Clickcost (-)",
+        "Withholding Tax",
+        "Adjust",
+        "หมายเหตุ Adjust",
+        "Remaining Budget",
+        "Difference",
+        "Note"
+        );
+        fputcsv($fp, $report_header);
+        $reconcile_list = array();
+        if($results["status"] == "success"){
+          foreach($results["data"] as $key => $report){
+            $children = $this->reportModel->getReconcileDataByParent($report["parent_id"],$month,$year);
+            foreach($children["data"] as $child){
+              $reconcile_list[] = array(
+                $child["report_id"],
+                $child["parent_id"],
+                $child["grandadmin_customer_id"],
+                $child["grandadmin_customer_name"],
+                $child["offset_acct"],
+                $child["offset_acct_name"],
+                $child["company"],
+                $child["payment_method"],
+                $child["last_month_remaining"],
+                $child["adjustment_remain"],
+                $child["adjustment_remain_note"],
+                $child["receive"],
+                $child["invoice"],
+                $child["transfer"],
+                $child["ads_credit_note"],
+                $child["spending_invoice"],
+                $child["adjustment_free_click_cost"],
+                $child["adjustment_free_click_cost_note"],
+                $child["adjustment_free_click_cost_old"],
+                $child["adjustment_free_click_cost_old_note"],
+                $child["adjustment_cash_advance"],
+                $child["adjustment_cash_advance_note"],
+                $child["adjustment_max"],
+                $child["adjustment_max_note"],
+                $child["cash_advance"],
+                $child["remaining_ice"],
+                $child["wallet"],
+                $child["wallet_free_click_cost"],
+                $child["withholding_tax"],
+                $child["adjustment_front_end"],
+                $child["adjustment_front_end_note"],
+                $child["remaining_budget"],
+                $child["difference"],
+                $child["note"]
+              );
+            }
+          }
+        }
+        
+        foreach ($reconcile_list as $data){
           fputcsv($fp, $data);
         }
         fclose($fp);   
@@ -278,7 +396,7 @@ class ReportsController extends Controller
     if ($_SERVER["REQUEST_METHOD"] === "POST") {
       $month = $_POST["month"];
       $year = $_POST["year"];
-      $created_by = $_POST["created_by"];
+      $created_by = $_SESSION['admin_name'];
       $is_closed = $this->reportModel->checkClosed($month, $year);
       if($is_closed["status"] == 'success'){
         if($is_closed["data"]){
@@ -324,6 +442,125 @@ class ReportsController extends Controller
         exit;
       }
       
+    }
+  }
+
+  public function getStatusPercent()
+  {
+    header("Content-Type: application/json");
+    if ($_SERVER["REQUEST_METHOD"] === "POST") {
+      $month = $_POST["month"];
+      $year = $_POST["year"];
+      $status_percent = 100;
+      $status_amount = 1;
+      $success_status = 0;
+      $report_status = $this->reportModel->getNotCompletedReportStatus($month, $year);
+      if(empty($report_status["data"])){
+        $result = array(
+          "status" => "success",
+          "data" => 100
+        );
+        echo json_encode($result);
+        exit;
+      }
+      $report_status = $report_status["data"];
+      foreach ($report_status as $key => $val) {
+        if($val["cash_advance"] != 'no'){
+          $status_amount += 1;
+          if($val["cash_advance"] == 'pending'){
+            $status_amount += 1;
+          }elseif($val["cash_advance"] == 'completed'){
+            $success_status += 1;
+          }
+        }
+        if($val["media_wallet"] != 'no'){
+          $status_amount += 1;
+          if($val["media_wallet"] == 'pending'){
+            $status_amount += 1;
+          }elseif($val["media_wallet"] == 'completed'){
+            $success_status += 1;
+          }
+        }
+        if($val["withholding_tax"] != 'no'){
+          $status_amount += 1;
+          if($val["withholding_tax"] == 'pending'){
+            $status_amount += 1;
+          }elseif($val["withholding_tax"] == 'completed'){
+            $success_status += 1;
+          }
+        }
+
+        if($val["free_click_cost"] != 'no'){
+          $status_amount += 1;
+          if($val["free_click_cost"] == 'pending'){
+            $status_amount += 1;
+          }elseif($val["free_click_cost"] == 'completed'){
+            $success_status += 1;
+          }
+        }
+
+        if($val["google_spending"] != 'no'){
+          $status_amount += 1;
+          if($val["google_spending"] == 'pending'){
+            $status_amount += 1;
+          }elseif($val["google_spending"] == 'completed'){
+            $success_status += 1;
+          }
+        }
+
+        if($val["facebook_spending"] != 'no'){
+          $status_amount += 1;
+          if($val["facebook_spending"] == 'pending'){
+            $status_amount += 1;
+          }elseif($val["facebook_spending"] == 'completed'){
+            $success_status += 1;
+          }
+        }
+
+        if($val["remaining_ice"] != 'no'){
+          $status_amount += 1;
+          if($val["remaining_ice"] == 'pending'){
+            $status_amount += 1;
+          }elseif($val["remaining_ice"] == 'completed'){
+            $success_status += 1;
+          }
+        }
+
+        if($val["gl_cash_advance"] != 'no'){
+          $status_amount += 1;
+          if($val["gl_cash_advance"] == 'pending'){
+            $status_amount += 1;
+          }elseif($val["gl_cash_advance"] == 'completed'){
+            $success_status += 1;
+          }
+        }
+
+        if($val["transfer"] != 'no'){
+          $status_amount += 1;
+          if($val["transfer"] == 'pending'){
+            $status_amount += 1;
+          }elseif($val["transfer"] == 'completed'){
+            $success_status += 1;
+          }
+        }
+
+      } //foreach
+      $total_percent = ($success_status / $status_amount) * $status_percent;
+      $total_percent = round($total_percent, 2);
+      $total_percent = $total_percent;
+      $result = array(
+        "status" => "success",
+        "data" => $total_percent
+      );
+      echo json_encode($result);
+      exit;
+    }else{
+      $result = array(
+        "status" => "fail",
+        "data" => "Something wrong!"
+      );
+      echo json_encode($result);
+      exit;
     }
   }
 
@@ -397,14 +634,13 @@ class ReportsController extends Controller
         'application/vnd.ms-excel',
         'text/xls',
         'text/xlsx',
-        'text/csv',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       );
       if (in_array($_FILES["cashAdvanceInputFile"]["type"], $allowedFileType)) {
         
 
         // Set month and year
-        if (empty($_POST["month"]) || empty($_POST["month"])) {
+        if (empty($_POST["month"]) || empty($_POST["year"])) {
           $res = array(
             "status" => "error",
             "type" => "alert",
@@ -416,8 +652,14 @@ class ReportsController extends Controller
         $month = $_POST["month"];
         $year = $_POST["year"];
 
+        // Set ignore invalid data
+        $ignore_invalid_data = false;
+        if (isset($_POST["ignore_invalid_data"])) {
+          $ignore_invalid_data = $_POST["ignore_invalid_data"];
+        }
 
-        $this->updateCashAdvanceData($_FILES["cashAdvanceInputFile"]["tmp_name"], $month, $year);
+
+        $this->updateCashAdvanceData($_FILES["cashAdvanceInputFile"]["tmp_name"], $month, $year,$ignore_invalid_data);
 
         $response = array(
           "status" => "success",
@@ -453,7 +695,7 @@ class ReportsController extends Controller
     header("Content-Type: application/json");
     $objPHPExcel = PHPExcel_IOFactory::load($filePath);
     $excelSheet = $objPHPExcel->getActiveSheet();
-    $highestRow = $excelSheet->getHighestRow(); // e.g. 10
+    $highestRow = $excelSheet->getHighestDataRow(); // e.g. 10
 
     $glCodeWhiteLists = array("212412", "212413", "212415", "412112");
     $glSeriesWhiteLists = array("IN","IV","CN","CV");
@@ -468,18 +710,40 @@ class ReportsController extends Controller
     $debit_error = false;
     $credit_error = false;
 
-    for ($row = 1; $row <= $highestRow; ++$row) {
-      $glCode = $excelSheet->getCell("F" . $row)->getValue();
-      
-      if (empty($glCode) || !is_numeric($glCode)) {
-        if (!in_array($glCode, $glCodeWhiteLists)) {
-          continue;
+    $updated_by = "";
+    if (isset($_SESSION['admin_name'])) {
+      $updated_by = $_SESSION['admin_name']; 
+    }
+
+    for ($row = 1; $row <= $highestRow; ++$row) 
+    {
+      // check column at row 1
+      if ($row === 1) {
+        $cols = $excelSheet->rangeToArray("A1:X1");
+        $check_columns = $this->resctrictGLCashAdvanceColumn($cols);
+        if (!$check_columns) {
+          $response = array(
+            "status" => "error",
+            "type" => "alert",
+            "data" => "",
+            "message" => "Columns does not match with valid pattern."
+          );
+          echo json_encode($response);
+          exit;
         }
+      }
+
+      $glCode = $excelSheet->getCell("F" . $row)->getValue();
+      if (empty($glCode) || !is_numeric($glCode)) {
+        continue;
+      }
+
+      if (!in_array($glCode, $glCodeWhiteLists)) {
+        continue;
       }
 
       $series = $excelSheet->getCell("C" . $row)->getValue();
       $series_type = substr($series, 0, 2);
-      
       if (!in_array(strtoupper($series_type), $glSeriesWhiteLists)) {
         continue;
       }
@@ -498,6 +762,7 @@ class ReportsController extends Controller
         $report_year = $year[0] . $year[1] . $report_year;
       }
 
+      // echo $report_month . "_" . $report_year . " -----> ";
       $internal_loop_error = false;
 
       if ($report_month != $month || $report_year != $year) {
@@ -570,7 +835,8 @@ class ReportsController extends Controller
         "cumulative_balance_lc" => $cumulativeBalanceLc,
         "series_code" => $seriesPrefix,
         "month" => $month,
-        "year" => $year
+        "year" => $year,
+        "updated_by" => $updated_by
       ));
 
       $valid_total++;
@@ -638,32 +904,12 @@ class ReportsController extends Controller
     $this->reportModel->updateReportStatus($month, $year, "gl_cash_advance", "waiting");
 
     $get_gl_cash_advance_detail = $this->resourceModel->getTotalDataUpdate("gl_cash_advance", $month, $year);
-    // -----------------
-    $waiting = 0;
-    foreach ($get_report_status["data"] as $rs => $status) {
-      if ($rs === "overall_status") continue;
-      if ($rs !== "transfer") {
-        if ($status === "waiting") $waiting++;
-      }
-    }
-
-    if ($waiting === 7 && $overall_status !== "waiting") {
-      $this->reportModel->updateReportStatus($month, $year, "overall_status", "waiting");
-      $overall_status = "waiting";
-    }
-    // ------------------
-
-    // ------------------
+    
     $allowed_generate_data = false;
-    if ($month === START_MONTH && $year === START_YEAR) {
-      if ($overall_status === "waiting") $allowed_generate_data = true;
-    } else {
-      $get_previous_report_status = $this->resourceModel->getProviousReportStatus($month, $year);
-      if ($get_previous_report_status["status"] === "success" && $get_previous_report_status["data"] == 0) {
-        $allowed_generate_data = true;
-      }
+    $get_previous_report_status = $this->resourceModel->getProviousReportStatus($month, $year);
+    if ($get_previous_report_status["status"] === "success" && $get_previous_report_status["data"] == 0) {
+      $allowed_generate_data = true;
     }
-    // ------------------
 
     $response = array(
       "status" => "success",
@@ -680,13 +926,17 @@ class ReportsController extends Controller
     exit;
   }
 
-  public function updateCashAdvanceData($filePath, $month, $year)
+  public function updateCashAdvanceData($filePath, $month, $year,$ignore_invalid_data)
   {
-    $ignore_invalid_data = true;
+    if($ignore_invalid_data == 'true'){
+      $ignore_invalid_data = true;
+    }else{
+      $ignore_invalid_data = false;
+    }
     header("Content-Type: application/json");
     $objPHPExcel = PHPExcel_IOFactory::load($filePath);
     $excelSheet = $objPHPExcel->getActiveSheet();
-    $highestRow = $excelSheet->getHighestRow(); // e.g. 10
+    $highestRow = $excelSheet->getHighestDataRow(); // e.g. 10
 
     $glCodeWhiteLists = array("212412", "212413", "212415", "412112");
     $glSeriesWhiteLists = array("IN","IV","CN","CV");
@@ -701,9 +951,30 @@ class ReportsController extends Controller
     $debit_error = false;
     $credit_error = false;
 
-    for ($row = 1; $row <= $highestRow; ++$row) {
+    $updated_by = "";
+    if (isset($_SESSION['admin_name'])) {
+      $updated_by = $_SESSION['admin_name']; 
+    }
+
+    for ($row = 1; $row <= $highestRow; ++$row) 
+    {
+      // check column at row 1
+      if ($row === 1) {
+        $cols = $excelSheet->rangeToArray("A1:X1");
+        $check_columns = $this->resctrictGLCashAdvanceColumn($cols);
+        if (!$check_columns) {
+          $response = array(
+            "status" => "error",
+            "type" => "alert",
+            "data" => "",
+            "message" => "Columns does not match with valid pattern."
+          );
+          echo json_encode($response);
+          exit;
+        }
+      }
+
       $glCode = $excelSheet->getCell("F" . $row)->getValue();
-      
       if (empty($glCode) || !is_numeric($glCode)) {
         if (!in_array($glCode, $glCodeWhiteLists)) {
           continue;
@@ -803,7 +1074,8 @@ class ReportsController extends Controller
         "cumulative_balance_lc" => $cumulativeBalanceLc,
         "series_code" => $seriesPrefix,
         "month" => $month,
-        "year" => $year
+        "year" => $year,
+        "updated_by" => $updated_by
       ));
 
       $valid_total++;
@@ -829,7 +1101,7 @@ class ReportsController extends Controller
           "valid_total" => $valid_total,
           "invalid_total" => $invalid_total,
           "error_type_lists" => $err_type,
-          // "invalid_lists" => $invalid_lists
+          "invalid_lists" => $invalid_lists
         )
       );
 
@@ -915,7 +1187,12 @@ class ReportsController extends Controller
         exit;
       }
 
-      $update_note = $this->reportModel->updateReportNote($report_id, $report_note);
+      $updated_by = "";
+      if (isset($_SESSION['admin_name'])) {
+        $updated_by = $_SESSION['admin_name']; 
+      }
+
+      $update_note = $this->reportModel->updateReportNote($report_id, $report_note, $updated_by);
       if ($update_note['status'] === 'success') {
         $res = array(
           "status" => "success",
@@ -947,4 +1224,48 @@ class ReportsController extends Controller
     $date_obj = DateTime::createFromFormat("!m", $month);
     return $date_obj->format("F") . " / " . $year;
   }
+
+  public function resctrictGLCashAdvanceColumn($incoming_cols)
+  {
+    $columns = array(
+      "Posting Date",
+      "Due Date",
+      "Series",
+      "Doc. No.",
+      "Trans. No.",
+      "G/L Acct/BP Code",
+      "Remarks",
+      "Offset Acct",
+      "Offset Acct Name",
+      "Debit (LC)",
+      "Credit (LC)",
+      "Cumulative Balance (LC)",
+      "Debit (FC)",
+      "Credit (FC)",
+      "Cumulative Balance (FC)",
+      "Department",
+      "Business Unit",
+      "Product",
+      "Intercompany",
+      "Blanket Agreement",
+      "Seq. No.",
+      "Ref. 1 (Header)",
+      "Ref. 2 (Header)",
+      "Ref. 3 (Header)"
+    );
+
+    $not_match = 0;
+    foreach ($incoming_cols[0] as $i => $ic) {
+      if (strtolower($ic) !== strtolower($columns[$i])) {
+        $not_match++;
+      }
+    }
+
+    if ($not_match === 0) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
 }

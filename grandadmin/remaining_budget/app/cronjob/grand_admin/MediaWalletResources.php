@@ -249,7 +249,7 @@ class MediaWalletResources
   {
     try {
       $mainDB = $this->db->dbCon();
-      $sql = "SELECT * FROM remaining_budget_report_status WHERE type = 'default' AND media_wallet = 'pending' ORDER BY year ASC, month ASC LIMIT 1";
+      $sql = "SELECT * FROM remaining_budget_report_status WHERE overall_status != 'completed' ORDER BY year ASC, month ASC, id ASC LIMIT 1";
       $stmt = $mainDB->query($sql);
       $result["status"] = "success";
       $result["data"] = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -322,7 +322,7 @@ class MediaWalletResources
 
   
 
-  function clearMediaWalletByMonthYear()
+  function clearMediaWalletByMonthYear($month, $year)
   {
     try {
       $mainDB = $this->db->dbCon();
@@ -347,47 +347,43 @@ class MediaWalletResources
 
   public function run()
   {
-    $last_month_timestamp =  strtotime("-1 month");
-    $primary_month = date("m", $last_month_timestamp);
-    $primary_year = date("Y", $last_month_timestamp);
-
     $get_month_year = $this->getMonthYearFromReportStatusTable();
-    if (empty($get_month_year["data"])) {
-      $this->createReportStatus($primary_month, $primary_year);
-      $get_month_year["data"][0] = array(
-        "month" => $primary_month,
-        "year" => $primary_year
-      );
-    }
 
     foreach ($get_month_year["data"] as $key => $val) 
     {
-      $get_media_wallet = $this->getMediaWallet($val["month"], $val["year"]);
-      echo $val["month"] . " - " . $val["year"] . " --------------------------------------------------> \n";
-      echo "Founded: " . count($get_media_wallet["data"]) . " rows \n";
-      echo "\n";
+      if($val["media_wallet"] == 'pending'){
+        $get_media_wallet = $this->getMediaWallet($val["month"], $val["year"]);
+        echo $val["month"] . " - " . $val["year"] . " --------------------------------------------------> \n";
+        echo "Founded: " . count($get_media_wallet["data"]) . " rows \n";
+        echo "\n";
 
-      if (empty($get_media_wallet["data"])) continue;
+        if (empty($get_media_wallet["data"])){
+          $this->updateReportStatusById($val["id"], "media_wallet", "waiting");
+          continue;
+        } 
+        $this->updateReportStatusById($val["id"], "media_wallet", "in_progress");
+        // clear media wallet data by month and year
+        $this->clearMediaWalletByMonthYear($val["month"], $val["year"]);
 
-      // clear media wallet data by month and year
-      $this->clearMediaWalletByMonthYear($val["month"], $val["year"]);
-      // $this->updateReportStatus($val["month"], $val["year"], "media_wallet", "pending");
+        foreach ($get_media_wallet["data"] as $media_wallet) 
+        {
+          $customerData = array(
+            "grandadmin_customer_id" => $media_wallet["grandadmin_customer_id"],
+            "grandadmin_customer_name" => $media_wallet["grandadmin_customer_name"]
+          );
+          $getRemainingBudgetCustomerID = $this->remainingBudgetCustomer->getRemainingBudgetCustomerID($customerData);
+          $media_wallet["remaining_budget_customer_id"] = $getRemainingBudgetCustomerID;
 
-      foreach ($get_media_wallet["data"] as $media_wallet) 
-      {
-        $customerData = array(
-          "grandadmin_customer_id" => $media_wallet["grandadmin_customer_id"],
-          "grandadmin_customer_name" => $media_wallet["grandadmin_customer_name"]
-        );
-        $getRemainingBudgetCustomerID = $this->remainingBudgetCustomer->getRemainingBudgetCustomerID($customerData);
-        $media_wallet["remaining_budget_customer_id"] = $getRemainingBudgetCustomerID;
-
-        // insert media wallet
-        $add_media_wallet = $this->addNewMediaWallet($val["month"], $val["year"], $media_wallet);
+          // insert media wallet
+          $add_media_wallet = $this->addNewMediaWallet($val["month"], $val["year"], $media_wallet);
+        }
+        
+        $this->updateReportStatusById($val["id"], "media_wallet", "waiting");
+        $is_last_process = $this->remainingBudgetCustomer->checkLastProcess($val["id"]);
+        if($is_last_process){
+          $this->updateReportStatusById($val["id"], "overall_status", "waiting");
+        }
       }
-      
-      $this->updateReportStatusById($val["id"], "media_wallet", "waiting");
-
     }   
 
   }

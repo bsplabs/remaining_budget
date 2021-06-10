@@ -27,8 +27,6 @@ class ResourcesController extends Controller
     if ($_SERVER["REQUEST_METHOD"] === "POST") {
       $allowedFileType = array(
         'application/vnd.ms-excel',
-        'text/xls',
-        'text/xlsx',
         'text/csv',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       );
@@ -59,13 +57,30 @@ class ResourcesController extends Controller
       $googleSpending = array();
       $dataIndex = 0;
 
+      $updated_by = "";
+      if (isset($_SESSION['admin_name'])) {
+        $updated_by = $_SESSION['admin_name']; 
+      }
+
       // Open the file for reading
       if (($handle = fopen("{$targetFilePath}", "r")) !== FALSE) {
         $rowStartNumber = NULL;  
         for ($i = 0; $row = fgetcsv($handle); ++$i) {
           if ($row[0] === "รหัสบัญชี" && $row[1] === "บัญชี") {
-            $rowStartNumber = $i;
-            continue;
+            $is_column_valid = $this->isGoogleFileColumnValid($row);
+            if($is_column_valid){
+              $rowStartNumber = $i;
+              continue;
+            }else{
+              $res = array(
+                "status" => "error",
+                "type" => "alert",
+                "message" => "Columns does not match with valid pattern."
+              );
+              echo json_encode($res);
+              exit;
+            }
+            
           }
           if ($rowStartNumber != NULL && $i > $rowStartNumber) {
             $googleSpending[$dataIndex]["google_id"] = $row[0];
@@ -75,7 +90,8 @@ class ResourcesController extends Controller
             $googleSpending[$dataIndex]["campaign"] = $row[4];
             $googleSpending[$dataIndex]["volume"] = $row[5];
             $googleSpending[$dataIndex]["unit"] = $row[6];
-            $googleSpending[$dataIndex]["spending_total_price"] = $row[7];
+            $googleSpending[$dataIndex]["spending_total_price"] = $this->getPrice($row[7]);
+            $googleSpending[$dataIndex]["updated_by"] = $updated_by;
             $dataIndex++;
           }
         }
@@ -144,20 +160,6 @@ class ResourcesController extends Controller
       $get_google_spending_detail = $this->resourceModel->getTotalDataUpdate("google_spending", $month, $year);
       $get_status_resource = $this->resourceModel->getStatusResources($month, $year);
       $overall_status = $get_status_resource["data"]["overall_status"];
-      $waiting = 0;
-      foreach ($get_status_resource["data"] as $rs => $status) {
-        if ($rs === "overall_status") continue;
-
-        if ($rs !== "transfer") {
-          if ($status === "waiting") $waiting++;
-        }
-      }
-
-      if ($waiting === 7 && $overall_status !== "waiting") {
-        // update overall status
-        $this->reportModel->updateReportStatus($month, $year, "overall_status", "waiting");
-        $overall_status = "waiting";
-      }
 
       // ------------------
       $allowed_generate_data = $this->getIsAllowGenerateButton($month, $year, $overall_status);
@@ -194,8 +196,6 @@ class ResourcesController extends Controller
     if ($_SERVER["REQUEST_METHOD"] === "POST") {
       $allowedFileType = array(
         'application/vnd.ms-excel',
-        'text/xls',
-        'text/xlsx',
         'text/csv',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       );
@@ -221,6 +221,12 @@ class ResourcesController extends Controller
       }
       $month = $_POST["month"];
       $year = $_POST["year"];
+      $ignore_invalid_data = $_POST["ignore_invalid_data"];
+      if($ignore_invalid_data == 'true'){
+        $ignore_invalid_data = true;
+      }else{
+        $ignore_invalid_data = false;
+      }
       $updated_by = $_POST["updated_by"];
 
       $targetFilePath = $_FILES["googleSpendingInputFile"]["tmp_name"];
@@ -228,13 +234,29 @@ class ResourcesController extends Controller
       $remaining_budget_customer_id_clear_list = array();
       $dataIndex = 0;
 
+      $updated_by = "";
+      if (isset($_SESSION['admin_name'])) {
+        $updated_by = $_SESSION['admin_name']; 
+      }
+
       // Open the file for reading
       if (($handle = fopen("{$targetFilePath}", "r")) !== FALSE) {
         $rowStartNumber = NULL;  
         for ($i = 0; $row = fgetcsv($handle); ++$i) {
           if ($row[0] === "รหัสบัญชี" && $row[1] === "บัญชี") {
-            $rowStartNumber = $i;
-            continue;
+            $is_column_valid = $this->isGoogleFileColumnValid($row);
+            if($is_column_valid){
+              $rowStartNumber = $i;
+              continue;
+            }else{
+              $res = array(
+                "status" => "error",
+                "type" => "alert",
+                "message" => "Columns does not match with valid pattern."
+              );
+              echo json_encode($res);
+              exit;
+            }
           }
           if ($rowStartNumber != NULL && $i > $rowStartNumber) {
             $googleSpending[$dataIndex]["google_id"] = $row[0];
@@ -244,7 +266,8 @@ class ResourcesController extends Controller
             $googleSpending[$dataIndex]["campaign"] = $row[4];
             $googleSpending[$dataIndex]["volume"] = $row[5];
             $googleSpending[$dataIndex]["unit"] = $row[6];
-            $googleSpending[$dataIndex]["spending_total_price"] = $row[7];
+            $googleSpending[$dataIndex]["spending_total_price"] = $this->getPrice($row[7]);
+            $googleSpending[$dataIndex]["updated_by"] = $updated_by;
             $dataIndex++;
           }
           
@@ -268,7 +291,6 @@ class ResourcesController extends Controller
 
         // Find grandadmin_customer_name
         $find_customer_name = $this->resourceModel->findCustomerName("AdwordsCusId", $value["google_id"]);
-        
         if ($find_customer_name["status"] === "success" && !empty($find_customer_name["data"])) {
           if (empty($find_customer_name["data"]["bill_company"])) {
             $customer_name = iconv('TIS-620','UTF-8',$find_customer_name["data"]["bill_firstname"]) . " " . iconv('TIS-620','UTF-8', $find_customer_name["data"]["bill_lastname"]);
@@ -352,8 +374,6 @@ class ResourcesController extends Controller
     if ($_SERVER["REQUEST_METHOD"] === "POST") {
       $allowedFileType = array(
         'application/vnd.ms-excel',
-        'text/xls',
-        'text/xlsx',
         'text/csv',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       );
@@ -393,10 +413,27 @@ class ResourcesController extends Controller
       
       $fb_spending_lists = array();
       $data_index = 0;
+
+      $updated_by = "";
+      if (isset($_SESSION['admin_name'])) {
+        $updated_by = $_SESSION['admin_name']; 
+      }
       
       if (($handle = fopen($file_path, "r")) !== FALSE) {
         while (!feof($handle)) {
           $row = fgetcsv($handle);
+          if ($row[0] == "Vendor" && $row[3] == "Advertiser"){
+            $is_column_valid = $this->isFacebookFileColumnValid($row);
+            if(!$is_column_valid){
+              $res = array(
+                "status" => "error",
+                "type" => "alert",
+                "message" => "Columns does not match with valid pattern."
+              );
+              echo json_encode($res);
+              exit;
+            }
+          }
           if ($row[0] == "Facebook Ireland Limited" && $row[3] == "ReadyPlanet Co., Ltd") {
             $total++;
             $fb_spending = array(
@@ -407,7 +444,8 @@ class ResourcesController extends Controller
               "payment_status" => $row[13],
               "facebook_id" => trim($row[16], "_"),
               "spending_total_price" => $this->getPrice($row[26]),
-              "campaign_id" => trim($row[18], "_")
+              "campaign_id" => trim($row[18], "_"),
+              "updated_by" => $updated_by
             );
 
             $billing_period = $fb_spending["billing_period"];
@@ -424,8 +462,6 @@ class ResourcesController extends Controller
                 "error_message" => "Month and Year (billing_date) do not match with last month and year"
               ));
               $invalid_total++;
-              print_r($invalid_lists);
-              exit;
               continue;
             }
 
@@ -522,20 +558,6 @@ class ResourcesController extends Controller
         $get_facebook_spending_detail = $this->resourceModel->getTotalDataUpdate("facebook_spending", $month, $year);
         $get_status_resource = $this->resourceModel->getStatusResources($month, $year);
         $overall_status = $get_status_resource["data"]["overall_status"];
-        $waiting = 0;
-        foreach ($get_status_resource["data"] as $rs => $status) {
-          if ($rs === "overall_status") continue;
-
-          if ($rs !== "transfer") {
-            if ($status === "waiting") $waiting++;
-          }
-        }
-
-        if ($waiting === 7 && $overall_status !== "waiting") {
-          $this->reportModel->updateReportStatus($month, $year, "overall_status", "waiting");
-          $overall_status = "waiting";
-        }
-
         $allowed_generate_data = $this->getIsAllowGenerateButton($month, $year, $overall_status);
 
         $response = array(
@@ -578,8 +600,6 @@ class ResourcesController extends Controller
     if ($_SERVER["REQUEST_METHOD"] === "POST") {
       $allowedFileType = array(
         'application/vnd.ms-excel',
-        'text/xls',
-        'text/xlsx',
         'text/csv',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       );
@@ -605,6 +625,12 @@ class ResourcesController extends Controller
       }
       $month = $_POST["month"];
       $year = $_POST["year"];
+      $ignore_invalid_data = $_POST["ignore_invalid_data"];
+      if($ignore_invalid_data == 'true'){
+        $ignore_invalid_data = true;
+      }else{
+        $ignore_invalid_data = false;
+      }
       $updated_by = $_POST["updated_by"];
 
       $file_path = $_FILES["facebookSpendingInputFile"]["tmp_name"];
@@ -616,10 +642,27 @@ class ResourcesController extends Controller
       $fb_spending_lists = array();
       $remaining_budget_customer_id_clear_list = array();
       $data_index = 0;
+
+      $updated_by = "";
+      if (isset($_SESSION['admin_name'])) {
+        $updated_by = $_SESSION['admin_name']; 
+      }
       
       if (($handle = fopen($file_path, "r")) !== FALSE) {
         while (!feof($handle)) {
           $row = fgetcsv($handle);
+          if ($row[0] == "Vendor" && $row[3] == "Advertiser"){
+            $is_column_valid = $this->isFacebookFileColumnValid($row);
+            if(!$is_column_valid){
+              $res = array(
+                "status" => "error",
+                "type" => "alert",
+                "message" => "Columns does not match with valid pattern."
+              );
+              echo json_encode($res);
+              exit;
+            }
+          }
           if ($row[0] == "Facebook Ireland Limited" && $row[3] == "ReadyPlanet Co., Ltd") {
             $total++;
             $fb_spending = array(
@@ -630,7 +673,8 @@ class ResourcesController extends Controller
               "payment_status" => $row[13],
               "facebook_id" => trim($row[16], "_"),
               "spending_total_price" => $this->getPrice($row[26]),
-              "campaign_id" => trim($row[18], "_")
+              "campaign_id" => trim($row[18], "_"),
+              "updated_by" => $updated_by
             );
 
             $billing_period = $fb_spending["billing_period"];
@@ -800,8 +844,6 @@ class ResourcesController extends Controller
     if ($_SERVER["REQUEST_METHOD"] === "POST") {
       $allowedFileType = array(
         'application/vnd.ms-excel',
-        'text/xls',
-        'text/xlsx',
         'text/csv',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       );
@@ -818,22 +860,38 @@ class ResourcesController extends Controller
       $targetFilePath = $_FILES["transferInputFile"]["tmp_name"];
       $month = $_POST["month"];
       $year = $_POST["year"];
-      $updated_by = $_POST["updated_by"];
       $wallet_transfers = array();
       $data_index = 0;
+      $updated_by = "";
+      if (isset($_SESSION['admin_name'])) {
+        $updated_by = $_SESSION['admin_name']; 
+      }
       $import_result = array();
       if (($handle = fopen($targetFilePath, "r")) !== FALSE) {
         while (!feof($handle)) {
           $row = fgetcsv($handle);
+          if ($data_index == 0){
+            $is_column_valid = $this->isWalletTransferFileColumnValid($row);
+            if(!$is_column_valid){
+              $res = array(
+                "status" => "error",
+                "type" => "alert",
+                "message" => "Columns does not match with valid pattern."
+              );
+              echo json_encode($res);
+              exit;
+            }
+          }
           if($data_index != 0){
             $wallet_transfer = array(
               "source_grandadmin_customer_id" => $row[0],
               "source_grandadmin_customer_name" => $row[1],
-              "destination_grandadmin_customer_id" => $row[2],
-              "destination_grandadmin_customer_name" => $row[3],
-              "source_value" => $row[4],
-              "note" => $row[5],
-              "clearing" => $row[6]
+              "destination_grandadmin_customer_id" => $row[5],
+              "destination_grandadmin_customer_name" => $row[6],
+              "source_value" => $row[3],
+              "note" => $row[11],
+              "clearing" => $row[12],
+              "updated_by" => $updated_by
             );
             array_push($wallet_transfers, $wallet_transfer);
           }          
@@ -846,13 +904,16 @@ class ResourcesController extends Controller
         
         foreach ($wallet_transfers as $idx => $wallet_transfer) 
         {
+
           if ($wallet_transfer["source_grandadmin_customer_id"] !== "" && $wallet_transfer["source_grandadmin_customer_name"] !== "" && 
           $wallet_transfer["destination_grandadmin_customer_id"] !== "" && $wallet_transfer["destination_grandadmin_customer_name"] !== "") 
           {
             $tmp = $this->getRemainingBudgetCustomerId('grandadmin',$wallet_transfer["source_grandadmin_customer_id"],$wallet_transfer["source_grandadmin_customer_name"],'wallet_transfer');
-            $wallet_transfer["source_remaining_budget_customer_id"] = $tmp["data"]["id"];
+            $tmp = $tmp["data"];
+            $wallet_transfer["source_remaining_budget_customer_id"] = $tmp["id"];
             $tmp = $this->getRemainingBudgetCustomerId('grandadmin',$wallet_transfer["destination_grandadmin_customer_id"],$wallet_transfer["destination_grandadmin_customer_name"],'wallet_transfer');
-            $wallet_transfer["destination_remaining_budget_customer_id"] = $tmp["data"]["id"];
+            $tmp = $tmp["data"];
+            $wallet_transfer["destination_remaining_budget_customer_id"] = $tmp["id"];
             $wallet_transfer["updated_by"] = $updated_by;
             $insert_wallet_transfer = $this->resourceModel->insertWalletTransfer($month, $year, $wallet_transfer);
           }
@@ -893,8 +954,6 @@ class ResourcesController extends Controller
     if ($_SERVER["REQUEST_METHOD"] === "POST") {
       $allowedFileType = array(
         'application/vnd.ms-excel',
-        'text/xls',
-        'text/xlsx',
         'text/csv',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       );
@@ -911,23 +970,45 @@ class ResourcesController extends Controller
       $targetFilePath = $_FILES["transferInputFile"]["tmp_name"];
       $month = $_POST["month"];
       $year = $_POST["year"];
-      $updated_by = $_POST["updated_by"];
+      $ignore_invalid_data = $_POST["ignore_invalid_data"];
+      if($ignore_invalid_data == 'true'){
+        $ignore_invalid_data = true;
+      }else{
+        $ignore_invalid_data = false;
+      }
       $remaining_budget_customer_id_clear_list = array();
       $wallet_transfers = array();
       $data_index = 0;
+      $updated_by = "";
+      if (isset($_SESSION['admin_name'])) {
+        $updated_by = $_SESSION['admin_name']; 
+      }
       $import_result = array();
       if (($handle = fopen($targetFilePath, "r")) !== FALSE) {
         while (!feof($handle)) {
           $row = fgetcsv($handle);
+          if ($data_index == 0){
+            $is_column_valid = $this->isWalletTransferFileColumnValid($row);
+            if(!$is_column_valid){
+              $res = array(
+                "status" => "error",
+                "type" => "alert",
+                "message" => "Columns does not match with valid pattern."
+              );
+              echo json_encode($res);
+              exit;
+            }
+          }
           if($data_index != 0){
             $wallet_transfer = array(
               "source_grandadmin_customer_id" => $row[0],
               "source_grandadmin_customer_name" => $row[1],
-              "destination_grandadmin_customer_id" => $row[2],
-              "destination_grandadmin_customer_name" => $row[3],
-              "source_value" => $row[4],
-              "note" => $row[5],
-              "clearing" => $row[6]
+              "destination_grandadmin_customer_id" => $row[5],
+              "destination_grandadmin_customer_name" => $row[6],
+              "source_value" => $row[3],
+              "note" => $row[11],
+              "clearing" => $row[12],
+              "updated_by" => $updated_by
             );
             array_push($wallet_transfers, $wallet_transfer);
           }          
@@ -1001,8 +1082,6 @@ class ResourcesController extends Controller
     if ($_SERVER["REQUEST_METHOD"] === "POST") {
       $allowedFileType = array(
         'application/vnd.ms-excel',
-        'text/xls',
-        'text/xlsx',
         'text/csv',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       );
@@ -1017,18 +1096,38 @@ class ResourcesController extends Controller
 
       $file_name = $_FILES["AdjustmentInputFile"]["name"];
       $targetFilePath = $_FILES["AdjustmentInputFile"]["tmp_name"];
-      $month = $_POST["month"];
-      $year = $_POST["year"];
       $updated_by = $_POST["updated_by"];
       $remaining_budget_customer_id_clear_list = array();
       $adjustments = array();
       $data_index = 0;
       $month = $_POST["month"];
       $year = $_POST["year"];
+      $ignore_invalid_data = $_POST["ignore_invalid_data"];
+      if($ignore_invalid_data == 'true'){
+        $ignore_invalid_data = true;
+      }else{
+        $ignore_invalid_data = false;
+      }
+      $updated_by = "";
+      if (isset($_SESSION['admin_name'])) {
+        $updated_by = $_SESSION['admin_name']; 
+      }
       $import_result = array();
       if (($handle = fopen($targetFilePath, "r")) !== FALSE) {
         while (!feof($handle)) {
           $row = fgetcsv($handle);
+          if ($data_index == 0){
+            $is_column_valid = $this->isAdjustmentFileColumnValid($row);
+            if(!$is_column_valid){
+              $res = array(
+                "status" => "error",
+                "type" => "alert",
+                "message" => "Columns does not match with valid pattern."
+              );
+              echo json_encode($res);
+              exit;
+            }
+          }
           if($data_index != 0 && $row[0] != ""){
             $adjustment = array(
               "report_id" => $row[0],
@@ -1048,13 +1147,37 @@ class ResourcesController extends Controller
               "adjustment_max" => $row[14],
               "adjustment_max_note" => $row[15],
               "adjustment_front_end" => $row[16],
-              "adjustment_front_end_note" => $row[17]
+              "adjustment_front_end_note" => $row[17],
+              "updated_by" => $updated_by
             );
             array_push($adjustments, $adjustment);
           }          
           $data_index++;
         }
         fclose($handle);
+
+        $valid_id = 0;
+        $invalid_id = 0;
+
+        foreach ($adjustments as $idx => $adjustment) 
+        {
+          $is_report_id_exist = $this->reportModel->checkExistReportId($adjustment["report_id"]);
+          if($is_report_id_exist){
+            $valid_id++;
+          }else{
+            $invalid_id++;
+          }
+        }
+
+        if($invalid_id > 0){
+          $res = array(
+            "status" => "error",
+            "type" => "alert",
+            "message" => "Invalid report id on file,please verify again."
+          );
+          echo json_encode($res);
+          exit;
+        }
 
         
         foreach ($adjustments as $idx => $adjustment) 
@@ -1152,11 +1275,6 @@ class ResourcesController extends Controller
 
       // check overall status for enable generate button
       $overall_status = $get_status_resources["data"]["overall_status"];
-      if ($waiting === 7 && $overall_status == "pending") {
-        // update overall status
-        // $this->reportModel->updateReportStatus($month, $year, "overall_status", "waiting");
-        // $overall_status = "waiting";
-      }
 
       // check previousely reconcile data
       $allowed_generate_data = $this->getIsAllowGenerateButton($month, $year, $overall_status);
@@ -1198,6 +1316,151 @@ class ResourcesController extends Controller
   public function getPrice($priceText)
   {
     return preg_replace('/[^0-9.]/', '', $priceText); 
+  }
+
+  private function isGoogleFileColumnValid($row)
+  {
+    $columns = array(
+      "รหัสบัญชี",
+      "บัญชี",
+      "งบประมาณบัญชี",
+      "ใบสั่งซื้อ",
+      "คำอธิบาย",
+      "ปริมาณ",
+      "หน่วย",
+      "จำนวน"
+    );
+
+    $not_match = 0;
+    foreach ($row as $i => $ic) {
+      if (strtolower($ic) !== strtolower($columns[$i])) {
+        $not_match++;
+      }
+    }
+
+    if ($not_match === 0) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  private function isFacebookFileColumnValid($row)
+  {
+    $columns = array(
+      "Vendor",
+      "Invoice Number",
+      "Transaction Type",
+      "Advertiser",
+      "Billing Period",
+      "Payment Terms",
+      "Invoice Net Amount",
+      "Invoice Tax Amount",
+      "Invoice Total Amount",
+      "Liable Party",
+      "Currency",
+      "Issue Date",
+      "Due Date",
+      "Payment Status",
+      "Amount Due",
+      "Customer PO Number",
+      "Ad Account Id",
+      "Ad Account Name",	
+      "Campaign Id",
+      "Campaign Name",
+      "Campaign Objective",
+      "Campaign Clicks",
+      "Campaign Impressions",
+      "Campaign Labels",
+      "Campaign Amount",
+      "Campaign Tax Amount",
+      "Campaign Total Amount",
+      "Campaign Creator",
+      "Campaign Last Modified By"
+    );
+
+    $not_match = 0;
+    foreach ($row as $i => $ic) {
+      if (strtolower($ic) !== strtolower($columns[$i])) {
+        $not_match++;
+      }
+    }
+
+    if ($not_match === 0) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  private function isWalletTransferFileColumnValid($row)
+  {
+    $columns = array(
+      "Cus id ต้นทาง",
+      "Cus name ต้นทาง",
+      "ยอดเงินก่อนโอน",
+      "ยอดที่ขอโอน",
+      "ยอดเงินหลังโอน",
+      "Cus id ปลายทาง",
+      "Cus name ปลายทาง",
+      "ยอดก่อนโอน",
+      "ยอดเงินหลังโอน",
+      "กระเป๋าที่ขอโยก",
+      "วันที่ดำเนินการ",
+      "หมายเหตุ",
+      "clearing (ถ้ามี)",
+      "JE"
+    );
+
+    $not_match = 0;
+    foreach ($row as $i => $ic) {
+      if (strtolower($ic) !== strtolower($columns[$i])) {
+        $not_match++;
+      }
+    }
+
+    if ($not_match === 0) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  private function isAdjustmentFileColumnValid($row)
+  {
+    $columns = array(
+      "Report ID",
+      "Parent ID",
+      "Customer ID",
+      "Custormer Name",
+      "Customer Acct",
+      "Customer Acct Name",
+      "Adjust ยอดยกมา",
+      "หมายเหตุ adjust ยอดยกมา" ,
+      "JE + Free Clickcost",
+      "หมายเหตุ JE + Free Clickcost",
+      "Free Clickcost (ค่าใช้จ่ายต้องห้าม)",
+      "หมายเหตุ Free Clickcost (ค่าใช้จ่ายต้องห้าม)",
+      "Adjustment",
+      "หมายเหตุ Adjustment",
+      "Max",
+      "หมายเหตุ Max",
+      "Adjustment frontend",
+      "หมายเหตุ Adjustment frontend"
+    );
+
+    $not_match = 0;
+    foreach ($row as $i => $ic) {
+      if (strtolower($ic) !== strtolower($columns[$i])) {
+        $not_match++;
+      }
+    }
+
+    if ($not_match === 0) {
+      return true;
+    } else {
+      return false;
+    }
   }
 
 }

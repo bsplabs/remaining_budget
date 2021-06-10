@@ -1,8 +1,8 @@
 <!-- Second CSS -->
-<link href="<?php echo BASE_URL; ?>/public/vendors/datatables/datatables.min.css" rel="stylesheet">
+<link href="<?php echo BASE_URL; ?>/public/vendors/datatables/datatables.min.css?version=<?php echo VERSION_NUMBER?>" rel="stylesheet">
 <!-- <link href="<?php echo BASE_URL; ?>/public/vendors/datatables/DataTables-1.10.24/dataTables.bootstrap4.min.css" rel="stylesheet"> -->
-<link rel='stylesheet' href="<?php echo BASE_URL; ?>/public/css/main.css"> 
-<link href="<?php echo BASE_URL; ?>/public/css/customer.css" rel="stylesheet">
+<link rel='stylesheet' href="<?php echo BASE_URL; ?>/public/css/main.css?version=<?php echo VERSION_NUMBER?>"> 
+<link href="<?php echo BASE_URL; ?>/public/css/customer.css?version=<?php echo VERSION_NUMBER?>" rel="stylesheet">
 
 <?php require_once APPROOT . "/views/layout/head.php"; ?>
 
@@ -15,7 +15,7 @@
   <br>
   <div class="row">
     <div class="col-md-6">
-      <h3>Customers Management</h3>
+      <h3>Customer Management</h3>
       <!-- <p class="mb-0">This page show you all customers and you could upload customer resources file to edit customers</p> -->
     </div>
     <!-- <div class="col-md-6 text-right">
@@ -26,70 +26,75 @@
   <hr>
 
   <div class="row  p-2 m-0 mb-2">
-    <div class="col-md-5 p-0">
-      <!-- <button> <span> <i class='bx bx-filter'></i> Filter </span> </button> -->
+    <div class="col-md-6 p-0">
       <!--  -->
-      <div class="p-2 mt-2">
-      <div class="form-group row">
-        <label for="filterParentId" class="col-sm-3 col-form-label">Parent ID</label>
-        <div class="col-sm-5">
-          <select name="" id="filterParentId" class="form-control form-control-sm">
-            <option value="all">All</option>
-            <option value="more_than_one_child">More than one child</option>
-            <option value="one_child">One child</option>
-          </select>
+      <div class="row mt-2"> 
+        <!--  -->
+        <div class="col-md-8 border-right">
+          <div class="form-group row" style="margin-bottom: 5px;">
+            <label for="filterParentId" class="col-sm-4 col-form-label">Parent ID</label>
+            <div class="col-sm-6">
+              <select name="" id="filterParentId" class="form-control form-control-sm">
+                <option value="all">All</option>
+                <option value="more_than_one_child">More than one child</option>
+                <option value="one_child">One child</option>
+              </select>
+            </div>
+          </div>
+          <!--  -->
+          <div class="form-group row" style="margin-bottom: 5px;">
+            <label for="filterPaymentMethod" class="col-sm-4 col-form-label">Payment Method</label>
+            <div class="col-sm-6">
+              <select name="" id="filterPaymentMethod" class="form-control form-control-sm">
+                <option value="all">All</option>
+                <option value="prepaid">prepaid</option>
+                <option value="postpaid">postpaid</option>
+              </select>
+            </div>
+          </div>
         </div>
-      </div>
-      <!--  -->
-      <!--  -->
-      <div class="form-group row">
-        <label for="filterPaymentMethod" class="col-sm-3 col-form-label">Payment Method</label>
-        <div class="col-sm-5">
-          <select name="" id="filterPaymentMethod" class="form-control form-control-sm">
-            <option value="all">All</option>
-            <option value="prepaid">Prepaid</option>
-            <option value="postpaid">Postpaid</option>
-          </select>
+
+        <div class="col-md-4 border-left">
+          <div class="text-center">
+            <button style="margin:5px 5px;" id="reset_filter" class="btn btn-reset btn-sm pull-right"><i class='bx bx-reset' ></i>Reset</button>
+            <button style="margin:0px 5px;" id="apply_filter" class="btn btn-add btn-sm pull-right"><i class='bx bx-filter-alt'></i>Apply</button>
+          </div>
         </div>
-      </div>
-      <!--  -->
-      <!--  -->
-      <div class="text-center">
-        <button style="margin:10px 5px;" id="reset_filter" class="btn btn-tools btn-sm pull-right"><i class='bx bx-reset' ></i>Reset</button>
-        <button style="margin:10px 5px;" id="apply_filter" class="btn btn-add btn-sm pull-right"><i class='bx bx-filter-alt'></i>Apply</button>
-      </div>
-      <!--  -->
+        <!--  -->
       </div>
     </div>
+
     <!-- RIGHT BUTTON -->
-    <div class="col-md-7 text-right">
-      <button type="button" class="btn btn-add" id="importCustomers"><i class='bx bx-add-to-queue'></i> Add / Replace</button>
-      <button type="button" class="btn btn-export" style="margin-left: 5px;" id="exportCustomers"><i class='bx bx-export'></i> Export</button>
+    <div class="col-md-6 text-right">
+      <button type="button" class="btn btn-add btn-sm" id="importCustomers"><i class='bx bx-add-to-queue'></i> Add / Replace</button>
+      <button type="button" class="btn btn-export btn-sm" style="margin-left: 5px;" id="exportCustomers"><i class='bx bx-export'></i> Export</button>
     </div>
   </div>
 
-  <table id="customers-table" class="table table-bordered table- text-nowrap table-striped table-hover">
-    <!-- THEAD -->
-    <thead>
-      <tr>
-        <th scope="col">ID</th>
-        <th scope="col">Parent ID</th>
-        <th scope="col">Customer ID</th>
-        <th scope="col">Customer Name</th>
-        <th scope="col">Offset Acct</th>
-        <th scope="col">Offset Acct Name</th>
-        <th scope="col">Main Business</th>
-        <th scope="col">Company</th>
-        <th scope="col">Payment Method</th>
-        <th scope="col">Created at</th>
-        <th scope="col">Updated at</th>
-        <th scope="col">Updated by</th>
-        <th scope="col" class="text-center">Actions</th>
-      </tr>
-    </thead>
-    <!-- TBODY -->
-    <tbody></tbody>
-  </table>
+  <div id="customers_table_wrapper">
+    <table id="customers-table" class="table table-bordered text-nowrap table-hover">
+      <!-- THEAD -->
+      <thead>
+        <tr>
+          <th scope="col">ID</th>
+          <th scope="col">Parent ID</th>
+          <th scope="col">Customer ID</th>
+          <th scope="col">Customer Name</th>
+          <th scope="col">Offset Acct</th>
+          <th scope="col">Offset Acct Name</th>
+          <th scope="col">Main Business</th>
+          <th scope="col">Company</th>
+          <th scope="col">Payment Method</th>
+          <th scope="col">Created at</th>
+          <th scope="col">Updated at</th>
+          <th scope="col">Updated by</th>
+          <th scope="col" class="text-center">Actions</th>
+        </tr>
+      </thead>
+      <!-- TBODY -->
+      <tbody></tbody>
+    </table>
+  </div>
 
   <br><br>
 
@@ -110,12 +115,13 @@
                     <input type="file" class="form-control" name="inputCustomerFileImport" id="inputFileImport" style="height: 100%;">
                   </div>
                 </div>
+                <small id="file_extension_message">File extension support only .xls, .xlsx</small>
               </div>
           </div>
 
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-            <button type="submit" class="btn btn-primary d-flex align-items-center" id="importCustomersSubmitButton">
+            <button type="button" class="btn btn-reset" data-dismiss="modal">Close</button>
+            <button type="submit" class="btn btn-add d-flex align-items-center" id="importCustomersSubmitButton">
               <span class="spinner-button spinner-border spinner-border-sm hide" role="status" aria-hidden="true"></span>
               <span class="text-button ml-2">Import</span>
             </button>
@@ -171,7 +177,7 @@
         </div>
         <!-- footer -->
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-reset" data-dismiss="modal">Close</button>
           <!-- <button type="button" class="btn btn-primary" id="saveCustomerEdited">Save</button> -->
         </div>
         <!--  -->
@@ -235,7 +241,7 @@
                 <!-- <input type="text" class="form-control form-control-sm" id="inputCompany"> -->
                 <select class="form-control form-control-sm" id="inputCompany">
                   <option value="RPTH">RPTH</option>
-                  <!-- <option value="MAX">MAX</option> -->
+                  <option value="RPMX">RPMX</option>
                 </select>
               </div>
               <div class="form-group col-md-6">
@@ -243,7 +249,7 @@
                 <!-- <input type="text" class="form-control form-control-sm" id="inputPaymentMethod"> -->
                 <select class="form-control form-control-sm" id="inputPaymentMethod">
                   <option value="prepaid">prepaid</option>
-                  <!-- <option value="postpaid">postpaid</option> -->
+                  <option value="postpaid">postpaid</option>
                 </select>
               </div>
             </div>
@@ -260,8 +266,8 @@
         </div>
         <!-- footer -->
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-          <button type="button" class="btn btn-primary" id="saveCustomerEdited">Save</button>
+          <button type="button" class="btn btn-reset" data-dismiss="modal">Close</button>
+          <button type="button" class="btn btn-add" id="saveCustomerEdited">Save</button>
         </div>
         <!--  -->
       </div>
@@ -285,8 +291,8 @@
         </div>
         <!-- footer -->
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-primary d-flex align-items-center" id="continueToSaveDuplicateButton">
+          <button type="button" class="btn btn-reset" data-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-add d-flex align-items-center" id="continueToSaveDuplicateButton">
             <span class="spinner-button spinner-border spinner-border-sm hide" role="status" aria-hidden="true"></span>
             <span>Continue to save</span>
           </button>
@@ -310,7 +316,7 @@
         </div>
         <!-- footer -->
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-dismiss="modal">No</button>
+          <button type="button" class="btn btn-reset" data-dismiss="modal">No</button>
           <button type="button" class="btn btn-danger" id="confirmDeleteCustomerButton">
             <span class="spinner-button spinner-border spinner-border-sm hide" role="status" aria-hidden="true"></span>
             <span class="text-button ml-2">Yes</span>
@@ -323,10 +329,18 @@
 
 </div>
 
+<!-- Spinner -->
+<div class="customer-overlay">
+  <div class="spanner">
+    <div class="loader"></div>
+    <p id="message_loading">Exporting data. please wait...</p>
+  </div>
+</div>
+
 <?php require_once APPROOT . "/views/layout/script.php"; ?>
 
 <!-- Second JS -->
-<script src="<?php echo BASE_URL; ?>/public/vendors/popper.min.js"></script>
-<script src="<?php echo BASE_URL; ?>/public/vendors/datatables/datatables.min.js"></script>
+<script src="<?php echo BASE_URL; ?>/public/vendors/popper.min.js?version=<?php echo VERSION_NUMBER?>"></script>
+<script src="<?php echo BASE_URL; ?>/public/vendors/datatables/datatables.min.js?version=<?php echo VERSION_NUMBER?>"></script>
 <!-- <script src="<?php echo BASE_URL; ?>/public/vendors/datatables/DataTables-1.10.24/dataTables.bootstrap4.min.js"></script> -->
-<script src="<?php echo BASE_URL; ?>/public/js/customer/index.js"></script>
+<script src="<?php echo BASE_URL; ?>/public/js/customer/index.js?version=<?php echo VERSION_NUMBER?>"></script>

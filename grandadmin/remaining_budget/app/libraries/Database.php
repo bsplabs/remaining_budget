@@ -37,7 +37,6 @@ class Database
 
     try {
       $this->dbHandler = new PDO($conn, $this->dbUser, $this->dbPass, $options);
-      // $this->dbHandler->exec('SET NAMES utf8mb4');
     } catch (PDOException $e) {
       $this->error = $e->getMessage();
       die($this->error);

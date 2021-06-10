@@ -3,17 +3,36 @@ var current_id_selected = '';
 
 var customer_table;
 
+function loadingHandler(open, message) {
+  if (open) {
+    $('.customer-overlay').removeClass('customer-overlay-active').addClass('customer-overlay-active');
+    $("div.spanner").addClass("show");
+    $("div.overlay").addClass("show");
+    if (message !== '') {
+      $('#message_loading').text(message);
+    } 
+  } else {
+    $('.customer-overlay').removeClass('customer-overlay-active');
+    $("div.spanner").removeClass("show");
+    $("div.overlay").removeClass("show");
+  }
+}
+
+$('#customers_table_wrapper').hide();
 $(document).ready(function () {
+  loadingHandler(true, 'Initializing customers data, please wait...');
+  // setTimeout(function() {
+  // }, 3000);
 
   customer_table = $("#customers-table").DataTable({
     processing: true,
     serverSide: true,
     ordering: true,
     orderMulti: true,
-    scrollY: '50vh',
+    // scrollY: '50vh',
     scrollCollapse: true,
     bLengthChange: false,
-    pageLength: 100,
+    pageLength: 50,
     order: [
       [1, 'asc'],
       [6, 'desc']
@@ -22,6 +41,8 @@ $(document).ready(function () {
       url: base_url + "/customers/get-customers",
       type: 'POST',
       data: function(d) {
+        $('#customers_table_wrapper').show();
+        loadingHandler(false, '');
         d.action_type = 'get_data',
         d.filters = {
           filter_parent_id: $('#filterParentId').val(),
@@ -191,7 +212,7 @@ $(document).ready(function () {
         contentType: false,
         success: function(res) {
           if (res.status === 'success') {
-            if (res.data.id != '' && res.data != data.id) {
+            if (res.data.id && res.data.id != data.id) {
               $("#modal-edit-customer").modal("hide");
               $('#duplicateId').text(res.data.id);
               $('#duplicateCustomerName').text(res.data.grandadmin_customer_name);
@@ -239,12 +260,12 @@ $(document).ready(function () {
   });
 
   $('#importCustomersForm').submit(function(event) {
+    $('#modalImportCustomers').modal('hide');
+    loadingHandler(true, 'Importing customer data, please wait...');
     $('#importCustomersSubmitButton .spinner-button').removeClass('hide');
-
     event.preventDefault();
-
     var formData = new FormData($(this)[0]);
-
+    // return;
     $.ajax({
       url: base_url + '/customers/import-customers',
       type: 'POST',
@@ -252,7 +273,8 @@ $(document).ready(function () {
       processData: false,
       contentType: false,
       success: function(res) {
-        $('#modalImportCustomers').modal('toggle');
+        loadingHandler(false, '');
+        $('#modalImportCustomers').modal('hide');
         $('#importCustomersSubmitButton .spinner-button').removeClass('hide').addClass('hide');
         if (res.status === 'error') {
           Swal.fire({
@@ -286,6 +308,7 @@ $(document).ready(function () {
   });
 
   $("#exportCustomers").click(function () {
+    loadingHandler(true, 'Exporting data, please wait...');
     var customer_params = customer_table.ajax.params();
     customer_params.action_type = 'export';
 
@@ -293,6 +316,7 @@ $(document).ready(function () {
     xhr.open("POST", base_url + "/customers/get-customers");
     xhr.responseType = "blob";
     xhr.onload = function () {
+      loadingHandler(false, '');
       if (this.status === 200) {
         var blob = this.response;
         var filename = "";

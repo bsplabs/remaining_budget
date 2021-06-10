@@ -16,10 +16,13 @@ class CashAdvance
     $cash_advance_job = $cash_advance_job["data"];
     
     if($cash_advance_job['cash_advance'] == 'waiting'){
+      $this->updateStatus('in_progress',$cash_advance_job["id"]);
+      
       $month = $cash_advance_job['month'];
-      $last_month = date("m", strtotime("-1 month"));
       $year = $cash_advance_job['year'];
-      $year_last_month = date("Y", strtotime("-1 month"));
+      $firstDateOfMonth = $year . "-" . $month . "-" . "01";
+      $last_month = date('m', strtotime('-1 month', strtotime($firstDateOfMonth)));
+      $year_last_month = date('Y', strtotime('-1 month', strtotime($firstDateOfMonth)));
       $check_first_report = $this->checkFirstReport();
       $prepare_report = $this->prepareReport($month,$year);
       if($check_first_report["data"]["row_count"] == 0){
@@ -42,8 +45,8 @@ class CashAdvance
       $mainDB = $this->db->dbCon();
       $sql = "SELECT *
               FROM remaining_budget_report_status
-              WHERE overall_status = 'waiting'
-              ORDER BY month,year Limit 1";
+              WHERE cash_advance = 'waiting' AND overall_status = 'waiting'
+              ORDER BY month,year,id Limit 1";
 
       $stmt = $mainDB->prepare($sql);
       $stmt->execute();

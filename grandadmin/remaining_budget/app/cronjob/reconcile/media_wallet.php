@@ -15,6 +15,8 @@ class MediaWallet
     $media_wallet_job = $this->getJob();
     $media_wallet_job = $media_wallet_job["data"];
     if($media_wallet_job['media_wallet'] == 'waiting'){
+      $this->updateStatus('in_progress',$media_wallet_job["id"]);
+      $set_zero = $this->setZero($media_wallet_job['month'],$media_wallet_job['year']);
       $media_wallet_raw_data = $this->getRawData($media_wallet_job['month'],$media_wallet_job['year']);
       foreach($media_wallet_raw_data["data"] as $media_wallet){
         $total = $media_wallet["remaining_wallet"] + $media_wallet["previous_clearing"];
@@ -26,6 +28,7 @@ class MediaWallet
           $mark_reconcile = $this->markReconcile($media_wallet["id"]);
         }
       }
+      $this->updateStatus('completed',$media_wallet_job["id"]);
     }
   }
 
@@ -34,8 +37,8 @@ class MediaWallet
       $mainDB = $this->db->dbCon();
       $sql = "SELECT *
               FROM remaining_budget_report_status
-              WHERE overall_status != 'completed'
-              ORDER BY month,year Limit 1";
+              WHERE media_wallet = 'waiting' AND overall_status = 'waiting' AND cash_advance = 'completed'
+              ORDER BY month,year,id Limit 1";
 
       $stmt = $mainDB->prepare($sql);
       $stmt->execute();
@@ -53,10 +56,11 @@ class MediaWallet
   private function getRawData($month,$year){
     try {
       $mainDB = $this->db->dbCon();
-      $sql = "SELECT *
-              FROM remaining_budget_media_wallet
-              WHERE month = :month and year = :year and is_reconcile = false
-              ORDER BY id limit 100;";
+      $sql = "SELECT w.*
+              FROM remaining_budget_media_wallet w left join remaining_budget_customers c
+              ON c.id = w.remaining_budget_customer_id
+              WHERE w.month = :month and w.year = :year and w.is_reconcile = false and c.payment_method = 'prepaid'
+              ORDER BY w.id";
 
       $stmt = $mainDB->prepare($sql);
       $stmt->bindParam("month", $month);
@@ -73,12 +77,35 @@ class MediaWallet
     return $result;
   }
 
+  private function setZero($month, $year){
+    try {
+
+      $mainDB = $this->db->dbCon();
+      $sql = "UPDATE remaining_budget_report
+              SET media_wallet = 0, is_reconcile = false
+              WHERE month = :month and year = :year and media_wallet != 0;";
+
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("month", $month);
+      $stmt->bindParam("year", $year);
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = "";
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
   private function moveToReport($total,$remaining_budget_id,$month,$year){
     try {
 
       $mainDB = $this->db->dbCon();
       $sql = "UPDATE remaining_budget_report
-              SET wallet = wallet + :total
+              SET wallet = wallet + :total, is_reconcile = false
               WHERE remaining_budget_customer_id = :remaining_budget_id and month = :month and year = :year
               ";
 
@@ -119,6 +146,25 @@ class MediaWallet
     return $result;
   }
 
+  private function updateStatus($status,$id){
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "UPDATE remaining_budget_report_status SET media_wallet = :status where id = :id";
+
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("status", $status);
+      $stmt->bindParam("id", $id);
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = "";
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
   
 }
 

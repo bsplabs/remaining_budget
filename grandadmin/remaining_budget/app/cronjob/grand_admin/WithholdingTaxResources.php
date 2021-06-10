@@ -19,8 +19,7 @@ class WithholdingTaxResources
       $mainDB = $this->db->dbCon('latin1');
       $sql = "SELECT *
               FROM ready_topup_withholding_tax
-              WHERE InsertDate < :insertDate
-                AND Status LIKE 'wait'
+              WHERE InsertDate < :insertDate AND ((Status LIKE 'wait') OR (ReturnDate >= :insertDate and Status = 'received'))
               ORDER BY 'ID' ASC";
 
       $stmt = $mainDB->prepare($sql);
@@ -219,7 +218,7 @@ class WithholdingTaxResources
   {
     try {
       $mainDB = $this->db->dbCon();
-      $sql = "SELECT month, year FROM remaining_budget_report_status WHERE type = 'default' AND withholding_tax = 'pending' ORDER BY year ASC, month ASC Limit 1;";
+      $sql = "SELECT * FROM remaining_budget_report_status WHERE overall_status != 'completed' ORDER BY year ASC, month ASC, id ASC Limit 1;";
       $stmt = $mainDB->query($sql);
       $result["status"] = "success";
       $result["data"] = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -271,6 +270,25 @@ class WithholdingTaxResources
     return $result;
   }
 
+  public function updateReportStatusById($id, $resource_type, $status)
+  {
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "UPDATE remaining_budget_report_status SET {$resource_type} = '{$status}' WHERE id = :id";
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("id", $id);
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = "";
+
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
   public function clearWithholdingTaxByMonthYear($month, $year)
   {
     try {
@@ -296,56 +314,54 @@ class WithholdingTaxResources
 
   function run()
   {
-    $last_month_timestamp =  strtotime("-1 month");
-    $primary_month = date("m", $last_month_timestamp);
-    $primary_year = date("Y", $last_month_timestamp);
-
     $get_month_year = $this->getMonthYearFromReportStatusTable();
-    // if (empty($get_month_year["data"])) {
-    //   $this->createReportStatus($primary_month, $primary_year);
-    //   $get_month_year["data"][0] = array(
-    //     "month" => $primary_month,
-    //     "year" => $primary_year
-    //   );
-    // }
 
     foreach ($get_month_year["data"] as $key => $val) 
     {
-      $sixthDateOfMonth = $val["year"] . "-" . $val["month"] . "-" . "06";
-      $get_withholding_tax = $this->getWithholdingTax($sixthDateOfMonth);
-      
-      if (empty($get_withholding_tax["data"])) continue;
+      if($val["withholding_tax"] == 'pending'){
+        $sixthDateOfMonth = $val["year"] . "-" . $val["month"] . "-" . "06";
+        $sixth_date_of_report_next_month = date('Y-m-d', strtotime('+1 month', strtotime($sixthDateOfMonth)));
+        $get_withholding_tax = $this->getWithholdingTax($sixth_date_of_report_next_month);
+        
+        if (empty($get_withholding_tax["data"])){
+          $this->updateReportStatusById($val["id"], "withholding_tax", "waiting");
+          continue;
+        }
 
-      // clear withholding tax data by month and year
-      $this->clearWithholdingTaxByMonthYear($val["month"], $val["year"]);
-      $this->updateReportStatus($val["month"], $val["year"], "withholding_tax", "pending");
+        // clear withholding tax data by month and year
+        $this->clearWithholdingTaxByMonthYear($val["month"], $val["year"]);
+        $this->updateReportStatusById($val["id"], "withholding_tax", "in_progress");
 
-      foreach ($get_withholding_tax["data"] as $withholding_tax) 
-      {
-        $getCustomerName = $this->getCustomerName($withholding_tax);
-        if ($getCustomerName["status"] == "success" && !empty($getCustomerName["data"])) {
-          if ($getCustomerName["data"]["bill_company"] !== "") {
-            $withholding_tax["grandadmin_customer_name"] = iconv('TIS-620','UTF-8',$getCustomerName["data"]["bill_company"]);
-          } else if ($getCustomerName["data"]["bill_firstname"] !== "" || $getCustomerName["data"]["bill_lastname"] !== "") {
-            $withholding_tax["grandadmin_customer_name"] = iconv('TIS-620','UTF-8',$getCustomerName["data"]["bill_firstname"]) . " " . iconv('TIS-620','UTF-8',$getCustomerName["data"]["bill_lastname"]);
+        foreach ($get_withholding_tax["data"] as $withholding_tax) 
+        {
+          $getCustomerName = $this->getCustomerName($withholding_tax);
+          if ($getCustomerName["status"] == "success" && !empty($getCustomerName["data"])) {
+            if ($getCustomerName["data"]["bill_company"] !== "") {
+              $withholding_tax["grandadmin_customer_name"] = iconv('TIS-620','UTF-8',$getCustomerName["data"]["bill_company"]);
+            } else if ($getCustomerName["data"]["bill_firstname"] !== "" || $getCustomerName["data"]["bill_lastname"] !== "") {
+              $withholding_tax["grandadmin_customer_name"] = iconv('TIS-620','UTF-8',$getCustomerName["data"]["bill_firstname"]) . " " . iconv('TIS-620','UTF-8',$getCustomerName["data"]["bill_lastname"]);
+            } else {
+              $withholding_tax["grandadmin_customer_name"] = "";
+            }
           } else {
             $withholding_tax["grandadmin_customer_name"] = "";
           }
-        } else {
-          $withholding_tax["grandadmin_customer_name"] = "";
+
+          $customerData = array(
+            "grandadmin_customer_id" => $withholding_tax["CustomerID"],
+            "grandadmin_customer_name" => $withholding_tax["grandadmin_customer_name"]
+          );
+          $getRemainingCustomerID = $this->remainingBudgetCustomer->getRemainingBudgetCustomerID($customerData);
+          $withholding_tax["remaining_budget_customer_id"] = $getRemainingCustomerID;
+    
+          $insert = $this->insertWithholdingTax($val["month"], $val["year"], $withholding_tax);
         }
-
-        $customerData = array(
-          "grandadmin_customer_id" => $withholding_tax["CustomerID"],
-          "grandadmin_customer_name" => $withholding_tax["grandadmin_customer_name"]
-        );
-        $getRemainingCustomerID = $this->remainingBudgetCustomer->getRemainingBudgetCustomerID($customerData);
-        $withholding_tax["remaining_budget_customer_id"] = $getRemainingCustomerID;
-  
-        $insert = $this->insertWithholdingTax($val["month"], $val["year"], $withholding_tax);
+        $this->updateReportStatusById($val["id"], "withholding_tax", "waiting");
+        $is_last_process = $this->remainingBudgetCustomer->checkLastProcess($val["id"]);
+        if($is_last_process){
+          $this->updateReportStatusById($val["id"], "overall_status", "waiting");
+        }
       }
-
-      $this->updateReportStatus($val["month"], $val["year"], "withholding_tax", "waiting");
     }
   }
 }
