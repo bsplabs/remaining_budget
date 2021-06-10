@@ -21,12 +21,12 @@ function dbClose()
 {
 }
 
-$month = '';
-$year = '';
-$file_path = "./../../public/temp/remaining_budget_mcc/01_รายงานงบประมาณ.xlsx";
-getAccessRemainingICERootFIle($file_path);
+$month = '03';
+$year = '2021';
+$file_path = "./../../public/temp/remaining_budget_mcc/03_รายงานงบประมาณ_Root_6008230127.xlsx";
+getAccessRemainingICERootFIle($file_path, $month, $month);
 
-function getAccessRemainingICERootFIle($file_path)
+function getAccessRemainingICERootFIle($file_path, $month, $year)
 {
   if (php_sapi_name() === "cli") {
     $allowedFileType = array('xlsx', 'xls', 'csv');
@@ -40,8 +40,11 @@ function getAccessRemainingICERootFIle($file_path)
 
       $remaining_ice_root = array();
       for ($row = 1; $row <= $highestRow; ++$row) {
-        $payment_type = $excelSheet->getCell("L" . $row)->getValue();
-        if ($payment_type !== 'การออกใบแจ้งหนี้รายเดือน') continue;
+        $payment_method = $excelSheet->getCell("L" . $row)->getValue();
+        if ($payment_method !== 'การออกใบแจ้งหนี้รายเดือน') continue;
+        
+        $currency = $excelSheet->getCell("M" . $row)->getValue();
+        if ($currency !== 'THB') continue;
 
         $account_status = $excelSheet->getCell("A" . $row)->getValue();
         $account_name = $excelSheet->getCell("B" . $row)->getValue();
@@ -54,7 +57,6 @@ function getAccessRemainingICERootFIle($file_path)
         $budget_code = $excelSheet->getCell("I" . $row)->getValue();
         $budget_account = $excelSheet->getCell("J" . $row)->getValue();
         $purchases_order = $excelSheet->getCell("K" . $row)->getValue();
-        $currency = $excelSheet->getCell("M" . $row)->getValue();
         $budget_total = $excelSheet->getCell("N" . $row)->getValue();
         $budget_balance = $excelSheet->getCell("O" . $row)->getValue();
         $percent_used = $excelSheet->getCell("P" . $row)->getFormattedValue();
@@ -68,8 +70,8 @@ function getAccessRemainingICERootFIle($file_path)
 
         $remaining_ice_root = array(
           'remaining_budget_customer_id' => $get_customer_info["remaining_budget_customer_id"],
-          'month' => '06',
-          'year' => '2021',
+          'month' => $month,
+          'year' => $year,
           'grandadmin_customer_id' => $get_customer_info["grandadmin_customer_id"],
           'grandadmin_customer_name' => $get_customer_info["grandadmin_customer_name"],
           'account_status' => $account_status,
@@ -83,7 +85,7 @@ function getAccessRemainingICERootFIle($file_path)
           'budget_code' => $budget_code,
           'budget_account' => $budget_account,
           'purchases_order' => $purchases_order,
-          'payment_type' => $payment_type,
+          'payment_method' => $payment_method,
           'currency' => $currency,
           'budget_total' => $budget_total,
           'budget_balance' => $budget_balance,
@@ -95,37 +97,12 @@ function getAccessRemainingICERootFIle($file_path)
         );
 
         // delete data before insert
+        clearRemainingICERoot($month, $year);
 
         // insert data
         $insert = insertRemainingICERoot($remaining_ice_root);
         print_r($insert);
         echo "\n\n";        
-
-        // array_push($remaining_ice_root, array(
-        //   'remaining_budget_customer_id' => $get_customer_info["remaining_budget_customer_id"],
-        //   'grandadmin_customer_id' => $get_customer_info["grandadmin_customer_id"],
-        //   'grandadmin_customer_name' => $get_customer_info["grandadmin_customer_name"],
-        //   'account_status' => $account_status,
-        //   'account_name' => $account_name,
-        //   'ads_id' => $ads_id,
-        //   'ads_type' => $ads_type,
-        //   'account_payment' => $account_payment,
-        //   'account_number_payment' => $account_number_payment,
-        //   'customer_paid' => $customer_paid,
-        //   'customer_paid_code' => $customer_paid_code,
-        //   'budget_code' => $budget_code,
-        //   'budget_account' => $budget_account,
-        //   'purchases_order' => $purchases_order,
-        //   'payment_type' => $payment_type,
-        //   'currency' => $currency,
-        //   'budget_total' => $budget_total,
-        //   'budget_balance' => $budget_balance,
-        //   'percent_used' => $percent_used,
-        //   'start_date' => $start_date,
-        //   'end_date' => $end_date,
-        //   'budget_daily_total' => $budget_daily_total,
-        //   'account_tag' => $account_tag
-        // ));
       }
 
       // print_r($remaining_ice_root);
@@ -184,7 +161,7 @@ function getCustomerInfo($ads_id)
 
   // find remaining_budget_customer_id
   $remaining_budget_customer_id = NULL;
-  if ($customer_id !== '' && $customer_name !== '') {
+  if (!empty($customer_id) && !empty($customer_name)) {
     $find_remaining_budget_customer_id = findRemainingBudgetCustomerID($customer_id, $customer_name);
     if ($find_remaining_budget_customer_id["status"] === 'success' && !empty($find_remaining_budget_customer_id["data"])) {
       $remaining_budget_customer_id = $find_remaining_budget_customer_id["data"];
@@ -297,7 +274,7 @@ function findRemainingBudgetCustomerID($customer_id, $customer_name)
   return $result;
 }
 
-function addNewGrandAdminCustomer()
+function addNewGrandAdminCustomer($customer_id, $customer_name)
 {
   try {
     $mainDB = dbCon();
@@ -383,7 +360,7 @@ function insertRemainingICERoot($remaining_ice_root)
               budget_code,
               budget_account,
               purchases_order,
-              payment_type,
+              payment_method,
               currency,
               budget_total,
               budget_balance,
@@ -410,7 +387,7 @@ function insertRemainingICERoot($remaining_ice_root)
               :budget_code,
               :budget_account,
               :purchases_order,
-              :payment_type,
+              :payment_method,
               :currency,
               :budget_total,
               :budget_balance,
@@ -439,7 +416,7 @@ function insertRemainingICERoot($remaining_ice_root)
     $stmt->bindParam("budget_code", $remaining_ice_root["budget_code"]);
     $stmt->bindParam("budget_account", $remaining_ice_root["budget_account"]);
     $stmt->bindParam("purchases_order", $remaining_ice_root["purchases_order"]);
-    $stmt->bindParam("payment_type", $remaining_ice_root["payment_type"]);
+    $stmt->bindParam("payment_method", $remaining_ice_root["payment_method"]);
     $stmt->bindParam("currency", $remaining_ice_root["currency"]);
     $stmt->bindParam("budget_total", $remaining_ice_root["budget_total"]);
     $stmt->bindParam("budget_balance", $remaining_ice_root["budget_balance"]);
@@ -453,6 +430,26 @@ function insertRemainingICERoot($remaining_ice_root)
     $result["status"] = "success";
     $result["data"] = "";
 
+  } catch (PDOException $e) {
+    $result["status"] = "fail";
+    $result["data"] = $e->getMessage();
+  }
+
+  $mainDB = null;
+  return $result;
+}
+
+function clearRemainingICERoot($month, $year)
+{
+  try {
+    $mainDB = dbCon();
+    $sql = "DELETE FROM remaining_budget_remaining_ice_root WHERE month = :month AND year = :year";
+    $stmt = $mainDB->prepare($sql);
+    $stmt->bindParam('month', $month);
+    $stmt->bindParam('year', $month);
+    $stmt->execute();
+    $result["status"] = "success";
+    $result["data"] = $stmt->fetch(PDO::FETCH_ASSOC);
   } catch (PDOException $e) {
     $result["status"] = "fail";
     $result["data"] = $e->getMessage();

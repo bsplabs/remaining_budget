@@ -1,8 +1,8 @@
 <?php
 
 // Core App Class
-ini_set("memory_limit","3072M");
-ini_set('max_execution_time', '360');
+// ini_set("memory_limit","3072M");
+// ini_set('max_execution_time', '360');
 class Core
 {
   protected $currentController = 'ReportsController';

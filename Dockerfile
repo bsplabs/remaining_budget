@@ -4,7 +4,7 @@ RUN apt-get update && apt-get install libzip-dev -y
 RUN pecl install zip-1.14.0.tar
 RUN docker-php-ext-configure zip --with-libzip
 
-COPY ./php/php.ini /etc/php5/apache2/
+COPY ./docker/php/php.ini /etc/php5/apache2/
 
 # RUN apt-get update && apt-get install libzip-dev curl php5-curl -y --force-yes
 # RUN pecl install zip-1.14.0.tar
