@@ -4,6 +4,8 @@ require_once dirname(__FILE__) . "/../config/config.php";
 
 require_once ROOTPATH . "/app/vendors/PHPExcel/PHPExcel/IOFactory.php";
 
+ini_set("memory_limit","3072M");
+
 function dbCon($charset = 'utf8')
 {
   try {
@@ -24,7 +26,11 @@ function dbClose()
 $month = '03';
 $year = '2021';
 $file_path = "./../../public/temp/remaining_budget_mcc/03_รายงานงบประมาณ_Root_6008230127.xlsx";
-getAccessRemainingICERootFIle($file_path, $month, $month);
+
+// delete data before insert
+clearRemainingICERoot($month, $year);
+
+getAccessRemainingICERootFIle($file_path, $month, $year);
 
 function getAccessRemainingICERootFIle($file_path, $month, $year)
 {
@@ -95,9 +101,6 @@ function getAccessRemainingICERootFIle($file_path, $month, $year)
           'budget_daily_total' => $budget_daily_total,
           'account_tag' => $account_tag
         );
-
-        // delete data before insert
-        clearRemainingICERoot($month, $year);
 
         // insert data
         $insert = insertRemainingICERoot($remaining_ice_root);
@@ -446,7 +449,7 @@ function clearRemainingICERoot($month, $year)
     $sql = "DELETE FROM remaining_budget_remaining_ice_root WHERE month = :month AND year = :year";
     $stmt = $mainDB->prepare($sql);
     $stmt->bindParam('month', $month);
-    $stmt->bindParam('year', $month);
+    $stmt->bindParam('year', $year);
     $stmt->execute();
     $result["status"] = "success";
     $result["data"] = $stmt->fetch(PDO::FETCH_ASSOC);
