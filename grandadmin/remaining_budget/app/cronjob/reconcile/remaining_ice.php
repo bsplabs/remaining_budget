@@ -28,6 +28,28 @@ class RemainingIce
             $mark_reconcile = $this->markReconcile($remaining_ice["id"]);
           }
       }
+
+      $remaining_ice_under_root = $this->getRemainingICEUnderRoot($remaining_ice_job['month'], $remaining_ice_job['year']); 
+      foreach ($remaining_ice_under_root['data'] as $key => $value) 
+      {
+        $get_previous_remaining_ice = $this->getPreviousRemainingICE($value['remaining_budget_customer_id'], $remaining_ice_job['month'], $remaining_ice_job['year']);
+        if (!empty($get_previous_remaining_ice['data']) && floatval($get_previous_remaining_ice['data']['remaining_ice']) == 0) {
+          if (floatval($value['remaining_budget']) != 0) {
+            // echo "----------------------------- \n";
+            // echo "Update -----> " . $value['remaining_budget'] . "\n";
+            // print_r($get_previous_remaining_ice['data']);
+            // echo "\n";
+
+            $this->updateRemainingIceOnReport(
+              $value['remaining_budget_customer_id'], 
+              $remaining_ice_job['month'], 
+              $remaining_ice_job['year'], 
+              $value['remaining_budget']
+            );
+          }
+        }
+      }
+
       $this->updateStatus('completed',$remaining_ice_job["id"]);
     }
   }
@@ -68,6 +90,79 @@ class RemainingIce
       $stmt->execute();
       $result["status"] = "success";
       $result["data"] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+  private function getRemainingICEUnderRoot($month, $year) 
+  {
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "SELECT * FROM remaining_budget_remaining_ice_root WHERE month = :month AND year = :year";
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("month", $month);
+      $stmt->bindParam("year", $year);
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+  public function getPreviousRemainingICE($remaining_budget_customer_id, $month, $year)
+  {
+    try {
+      $mainDB = $this->db->dbCon();
+      $sql = "SELECT * FROM remaining_budget_report
+              WHERE remaining_budget_customer_id = :remaining_budget_customer_id 
+                AND month = :month 
+                AND year = :year";
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("remaining_budget_customer_id", $remaining_budget_customer_id);
+      $stmt->bindParam("month", $month);
+      $stmt->bindParam("year", $year);
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+      $result["status"] = "fail";
+      $result["data"] = $e->getMessage();
+    }
+
+    $this->db->dbClose($mainDB);
+    return $result;
+  }
+
+  private function updateRemainingIceOnReport($remaining_budget_customer_id, $month, $year, $remaining_ice)
+  {
+    try {
+
+      $mainDB = $this->db->dbCon();
+      $sql = "UPDATE remaining_budget_report
+              SET remaining_ice = :remaining_ice
+              WHERE remaining_budget_customer_id = :remaining_budget_customer_id 
+                AND month = :month 
+                AND year = :year
+              ";
+
+      $stmt = $mainDB->prepare($sql);
+      $stmt->bindParam("remaining_budget_customer_id", $remaining_budget_customer_id);
+      $stmt->bindParam("month", $month);
+      $stmt->bindParam("year", $year);
+      $stmt->bindParam("remaining_ice", $remaining_ice);
+      $stmt->execute();
+      $result["status"] = "success";
+      $result["data"] = "";
     } catch (PDOException $e) {
       $result["status"] = "fail";
       $result["data"] = $e->getMessage();

@@ -23,9 +23,9 @@ function dbClose()
 {
 }
 
-$month = '03';
-$year = '2021';
-$file_path = "./../../public/temp/remaining_budget_mcc/03_รายงานงบประมาณ_Root_6008230127.xlsx";
+$month = '';
+$year = '';
+$file_path = "./../../public/temp/remaining_budget_mcc/01_รายงานงบประมาณ.xlsx";
 
 // delete data before insert
 clearRemainingICERoot($month, $year);
@@ -34,6 +34,11 @@ getAccessRemainingICERootFIle($file_path, $month, $year);
 
 function getAccessRemainingICERootFIle($file_path, $month, $year)
 {
+  if (empty($file_path) || empty($month) || empty($year)) {
+    echo "Program require file path, month and year \n\n";
+    return 0;
+  }
+
   if (php_sapi_name() === "cli") {
     $allowedFileType = array('xlsx', 'xls', 'csv');
     $ext = pathinfo($file_path, PATHINFO_EXTENSION);
@@ -63,8 +68,8 @@ function getAccessRemainingICERootFIle($file_path, $month, $year)
         $budget_code = $excelSheet->getCell("I" . $row)->getValue();
         $budget_account = $excelSheet->getCell("J" . $row)->getValue();
         $purchases_order = $excelSheet->getCell("K" . $row)->getValue();
-        $budget_total = $excelSheet->getCell("N" . $row)->getValue();
-        $budget_balance = $excelSheet->getCell("O" . $row)->getValue();
+        $total_budget = $excelSheet->getCell("N" . $row)->getValue();
+        $remaining_budget = $excelSheet->getCell("O" . $row)->getValue();
         $percent_used = $excelSheet->getCell("P" . $row)->getFormattedValue();
         $start_date = $excelSheet->getCell("Q" . $row)->getValue();
         $end_date = $excelSheet->getCell("R" . $row)->getValue();
@@ -93,8 +98,8 @@ function getAccessRemainingICERootFIle($file_path, $month, $year)
           'purchases_order' => $purchases_order,
           'payment_method' => $payment_method,
           'currency' => $currency,
-          'budget_total' => $budget_total,
-          'budget_balance' => $budget_balance,
+          'total_budget' => $total_budget,
+          'remaining_budget' => $remaining_budget,
           'percent_used' => $percent_used,
           'start_date' => $start_date,
           'end_date' => $end_date,
@@ -365,8 +370,8 @@ function insertRemainingICERoot($remaining_ice_root)
               purchases_order,
               payment_method,
               currency,
-              budget_total,
-              budget_balance,
+              total_budget,
+              remaining_budget,
               percent_used,
               start_date,
               end_date,
@@ -392,8 +397,8 @@ function insertRemainingICERoot($remaining_ice_root)
               :purchases_order,
               :payment_method,
               :currency,
-              :budget_total,
-              :budget_balance,
+              :total_budget,
+              :remaining_budget,
               :percent_used,
               :start_date,
               :end_date,
@@ -421,8 +426,8 @@ function insertRemainingICERoot($remaining_ice_root)
     $stmt->bindParam("purchases_order", $remaining_ice_root["purchases_order"]);
     $stmt->bindParam("payment_method", $remaining_ice_root["payment_method"]);
     $stmt->bindParam("currency", $remaining_ice_root["currency"]);
-    $stmt->bindParam("budget_total", $remaining_ice_root["budget_total"]);
-    $stmt->bindParam("budget_balance", $remaining_ice_root["budget_balance"]);
+    $stmt->bindParam("total_budget", $remaining_ice_root["total_budget"]);
+    $stmt->bindParam("remaining_budget", $remaining_ice_root["remaining_budget"]);
     $stmt->bindParam("percent_used", $remaining_ice_root["percent_used"]);
     $stmt->bindParam("start_date", $remaining_ice_root["start_date"]);
     $stmt->bindParam("end_date", $remaining_ice_root["end_date"]);

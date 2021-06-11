@@ -16,7 +16,10 @@ class RemainingICE
   {
     try {
       $mainDB = $this->db->dbCon();
-      $sql = "SELECT * FROM remaining_budget_report_status WHERE overall_status != 'completed' ORDER BY year ASC, month ASC, id ASC Limit 1;";
+      $sql = "SELECT * FROM remaining_budget_report_status 
+              WHERE overall_status != 'completed'
+              ORDER BY year ASC, month ASC, id ASC 
+              Limit 1;";
       $stmt = $mainDB->query($sql);
       $result["status"] = "success";
       $result["data"] = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -100,12 +103,12 @@ class RemainingICE
     $limit = 50;
 
     $get_month_year = $this->getMonthYearFromReportStatusTable();
+
     foreach ($get_month_year["data"] as $month_year_key => $month_year_val) 
     {
       if($month_year_val["remaining_ice"] == 'pending'){
         $month = $month_year_val['month'];  
         $year = $month_year_val['year']; 
-
         
         $this->updateReportStatusById($month_year_val["id"], "remaining_ice", "in_progress");
 
